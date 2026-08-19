@@ -101,5 +101,5 @@ if(mobile){
   if(shopStage instanceof HTMLElement){const lazyShop=new IntersectionObserver(entries=>{if(!entries[0]?.isIntersecting)return;lazyShop.disconnect();initWebGL(shopStage,{subtle:false})},{rootMargin:'240px'});lazyShop.observe(shopStage)}
 }else{
   await initWebGPU(topStage);
-  if(shopStage instanceof HTMLElement)await initWebGPU(shopStage,{subtle:true});
+  if(shopStage instanceof HTMLElement)await initWebGPU(shopStage,{subtle:false});
 }
