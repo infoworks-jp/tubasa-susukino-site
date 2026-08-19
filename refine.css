@@ -27,3 +27,21 @@
     transform-origin:67% 68%!important;
   }
 }
+
+/* Desktop hero composition: reserve the left upper sky for the copy and
+   place the enlarged vertical mark in the open sky right of the KIRIN sign. */
+@media (min-width:701px){
+  .hero-copy,.hero-copy.reveal.in{
+    left:5.6vw;
+    top:16vh;
+    bottom:auto;
+  }
+  .hero-logo{
+    left:68vw!important;
+    right:auto!important;
+    top:9vh!important;
+    height:46.5vh!important;
+    max-width:none!important;
+    transform:none!important;
+  }
+}
