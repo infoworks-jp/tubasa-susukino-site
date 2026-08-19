@@ -1,0 +1,66 @@
+name: Pavel Migration STEP 4
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  step4-emission-amount:
+    name: STEP 4 / emission amount only
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enforce STEP 4 contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s reference/step3-white-steam.html
+          test -s reference/step4-emission-amount.html
+          grep -q 'X=.632,Y=.486' reference/step4-emission-amount.html
+          grep -q "color:'neutral-white'" reference/step4-emission-amount.html
+          grep -q 'DYE_AMPLITUDE=.03' reference/step4-emission-amount.html
+          grep -q 'intervalMs:150' reference/step4-emission-amount.html
+          grep -q 'resetInitialSplats:true' reference/step4-emission-amount.html
+          grep -q 'clearStartupQueue:true' reference/step4-emission-amount.html
+          grep -q 'explicitFramebufferZero:true' reference/step4-emission-amount.html
+          grep -q 'microDrift:true' reference/step4-emission-amount.html
+          grep -q "visualFilter:'none'" reference/step4-emission-amount.html
+          grep -q "onlyChange:'emissionAmount'" reference/step4-emission-amount.html
+          grep -q 'splatStack.length=0' reference/step4-emission-amount.html
+          grep -q 'function clearFBO' reference/step4-emission-amount.html
+          grep -q 'function zeroFluidState' reference/step4-emission-amount.html
+          grep -q 'gl.clear(gl.COLOR_BUFFER_BIT)' reference/step4-emission-amount.html
+          grep -q 'dye?.read,dye?.write,velocity?.read,velocity?.write' reference/step4-emission-amount.html
+          if grep -Eq 'filter:[^;]*(grayscale|brightness)' reference/step4-emission-amount.html; then echo 'FAIL: STEP4 changed corrected STEP3 rendering'; exit 1; fi
+          if grep -Eq 'config\.(SIM_RESOLUTION|DYE_RESOLUTION|DENSITY_DISSIPATION|VELOCITY_DISSIPATION|PRESSURE|PRESSURE_ITERATIONS|CURL|SPLAT_RADIUS|SPLAT_FORCE)[[:space:]]*=' reference/step4-emission-amount.html; then echo 'FAIL: physics parameter changed in STEP4'; exit 1; fi
+      - name: Install browser QA
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0 pixelmatch@7.1.0 pngjs@7.0.0
+          npx playwright install --with-deps chromium
+      - name: Capture STEP 4 evidence
+        shell: bash
+        run: |
+          cat > step4.mjs <<'JS'
+          import { chromium } from 'playwright';import fs from 'fs';import pixelmatch from 'pixelmatch';import { PNG } from 'pngjs';
+          fs.mkdirSync('step4-evidence',{recursive:true});const browser=await chromium.launch({headless:true});const report={commit:process.env.GITHUB_SHA,step:'STEP 4 emission amount only',passed:true,cases:{}};
+          const diff=(a,b,out)=>{const A=PNG.sync.read(fs.readFileSync(a)),B=PNG.sync.read(fs.readFileSync(b));const D=new PNG({width:A.width,height:A.height});const n=pixelmatch(A.data,B.data,D.data,A.width,A.height,{threshold:.04,includeAA:true});fs.writeFileSync(out,PNG.sync.write(D));return n};
+          const whiteRatio=path=>{const P=PNG.sync.read(fs.readFileSync(path));let n=0,total=P.width*P.height;for(let i=0;i<P.data.length;i+=4){if(P.data[i]>242&&P.data[i+1]>242&&P.data[i+2]>242)n++;}return n/total};
+          const canvasChroma=path=>{const P=PNG.sync.read(fs.readFileSync(path));let bright=0,colored=0;for(let i=0;i<P.data.length;i+=4){const r=P.data[i],g=P.data[i+1],b=P.data[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);if(mx>25){bright++;if(mx-mn>26)colored++;}}return{brightPixels:bright,coloredPixels:colored,coloredRatio:bright?colored/bright:0};};
+          const captureCanvasOnly=async(page,path)=>{await page.evaluate(()=>{const c=document.querySelector('canvas');document.body.style.background='#000';c.style.mixBlendMode='normal';c.style.background='#000';});await page.locator('canvas').screenshot({path});await page.evaluate(()=>{const c=document.querySelector('canvas');document.body.style.background='';c.style.mixBlendMode='';c.style.background='';});};
+          for(const [name,width,height] of [['desktop',1440,1100],['mobile',390,844]]){const errors=[];const page=await browser.newPage({viewport:{width,height}});await page.goto(`https://infoworks-jp.github.io/subasa-new-official/reference/step4-emission-amount.html?qa=${process.env.GITHUB_SHA}-${Date.now()}`,{waitUntil:'domcontentloaded',timeout:30000});await page.waitForTimeout(2300);const state=await page.evaluate(()=>window.__pavelMigrationStep4||null);if(!state||state.onlyChange!=='emissionAmount'||state.resetInitialSplats!==true||state.clearStartupQueue!==true||state.explicitFramebufferZero!==true||state.dyeAmplitude!==.03||state.intervalMs!==150||state.microDrift!==true||state.visualFilter!=='none')errors.push('step4-state-invalid');await page.screenshot({path:`step4-evidence/${name}-t0.png`});await captureCanvasOnly(page,`step4-evidence/${name}-canvas-t0.png`);await page.waitForTimeout(1500);await page.screenshot({path:`step4-evidence/${name}-t1.png`});await page.waitForTimeout(1800);await page.screenshot({path:`step4-evidence/${name}-t3.png`});await captureCanvasOnly(page,`step4-evidence/${name}-canvas-t3.png`);const d01=diff(`step4-evidence/${name}-t0.png`,`step4-evidence/${name}-t1.png`,`step4-evidence/${name}-diff01.png`);const d13=diff(`step4-evidence/${name}-t1.png`,`step4-evidence/${name}-t3.png`,`step4-evidence/${name}-diff13.png`);const wr=whiteRatio(`step4-evidence/${name}-t3.png`);const chroma=canvasChroma(`step4-evidence/${name}-canvas-t3.png`);const motionMin=Math.max(25,Math.round(150*(width*height)/(1440*1100)));if(d01<motionMin||d13<motionMin)errors.push(`steam-motion-low:${d01}/${d13}<${motionMin}`);if(wr>.12)errors.push(`overexposed-white-ratio:${wr}`);if(chroma.coloredRatio>.08)errors.push(`startup-color-remains:${chroma.coloredRatio}`);report.cases[name]={state,motionMin,diff01:d01,diff13:d13,whiteRatioT3:wr,canvasChroma:chroma,errors};if(errors.length)report.passed=false;await page.close();}await browser.close();fs.writeFileSync('step4-evidence/report.json',JSON.stringify(report,null,2));if(!report.passed)process.exit(1);
+          JS
+          node step4.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PAVEL-MIGRATION-STEP4-${{ github.sha }}
+          path: step4-evidence
+          retention-days: 90

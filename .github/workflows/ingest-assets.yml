@@ -1,0 +1,78 @@
+name: Ingest verified Tsubasa assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets-pack*.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate and extract verified asset pack
+        id: pack
+        run: |
+          set -euo pipefail
+          pack=$(find . -maxdepth 1 -type f -name 'assets-pack*.zip' | head -1)
+          test -n "$pack" || { echo 'asset pack not found'; exit 1; }
+          echo "file=$pack" >> "$GITHUB_OUTPUT"
+          rm -rf assets
+          unzip -q "$pack"
+          test -d assets
+      - name: Recover exact approved vertical logo
+        run: |
+          set -euo pipefail
+          curl -fsSL 'https://raw.githubusercontent.com/infoworks-jp/tsubasa-official-site/main/assets/logo-vertical.svg' -o assets/logo-vertical.svg
+          test $(stat -c%s assets/logo-vertical.svg) -gt 50000
+          sed -i 's#https://raw.githubusercontent.com/infoworks-jp/tsubasa-official-site/main/assets/logo-vertical.svg#assets/logo-vertical.svg#g' index.html
+          sed -i 's#https://raw.githubusercontent.com/infoworks-jp/tsubasa-official-site/main/assets/susukino-top-20260816.png#assets/susukino-top.webp#g' style.css
+          sed -i 's#https://raw.githubusercontent.com/infoworks-jp/tsubasa-official-site/main/assets/store-interior.png#assets/store-interior.webp#g' style.css
+      - name: Verify required assets and minimum sizes
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(ultimate-miso.webp tsubasa-ramen.webp chashu.webp butter-corn.webp shio-shoyu.webp negi.webp spicy-negi.webp kimchi.webp fried-rice.webp gyoza.webp menu-ja.webp menu-en.webp menu-zh.webp menu-ko.webp susukino-top.webp store-interior.webp)
+          for name in "${required[@]}"; do
+            test -f "assets/$name" || { echo "MISSING assets/$name"; exit 1; }
+            bytes=$(stat -c%s "assets/$name")
+            test "$bytes" -gt 70000 || { echo "TOO SMALL assets/$name $bytes"; exit 1; }
+          done
+          test $(stat -c%s assets/ultimate-miso.webp) -gt 120000
+          test $(stat -c%s assets/tsubasa-ramen.webp) -gt 150000
+          test $(stat -c%s assets/menu-ja.webp) -gt 200000
+      - name: Verify image dimensions
+        run: |
+          python -m pip install --quiet Pillow
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          minimum = {
+            'ultimate-miso.webp': (1400,900), 'tsubasa-ramen.webp': (1400,900),
+            'menu-ja.webp': (1100,800), 'menu-en.webp': (1100,800),
+            'menu-zh.webp': (1100,800), 'menu-ko.webp': (1100,800),
+            'susukino-top.webp': (1100,1300), 'store-interior.webp': (1500,950),
+          }
+          for p in Path('assets').glob('*.webp'):
+              w,h=Image.open(p).size
+              if p.name in minimum:
+                  mw,mh=minimum[p.name]
+                  assert w>=mw and h>=mh, (p.name,w,h,mw,mh)
+              elif p.name not in {'susukino-top.webp','store-interior.webp'}:
+                  assert w>=1190 and h>=790, (p.name,w,h)
+              print(p.name,w,h,p.stat().st_size)
+          PY
+      - name: Commit verified local assets
+        run: |
+          set -euo pipefail
+          rm -f assets-pack*.zip
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A assets index.html style.css 'assets-pack*.zip' || true
+          git add -A
+          git commit -m 'Install verified high-resolution web assets'
+          git push

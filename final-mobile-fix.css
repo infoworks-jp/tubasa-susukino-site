@@ -1,0 +1,29 @@
+/* 2026-08-18 direct repair: single authoritative mobile overrides. */
+@media (max-width:700px){
+  .signature-miso .media{object-fit:cover!important;object-position:66% 82%!important;transform:scale(1.55)!important;transform-origin:66% 82%!important}
+  .signature-butter-corn .media{object-fit:cover!important;object-position:50% 45%!important;transform:scale(1.12)!important;transform-origin:50% 45%!important}
+  .signature-tsubasa .media{object-fit:cover!important;object-position:61% 44%!important;transform:scale(1.06)!important;transform-origin:61% 44%!important}
+  /* Keep the live fluid layer in the same image coordinate system as the zoomed photo. */
+  .signature .fx-steam,.signature-miso .steam-miso,.signature-butter-corn .steam-butter-corn,.signature-tsubasa .steam-tsubasa-a,.signature-tsubasa .steam-tsubasa-b{transform:scale(var(--steam-image-scale,1))!important;transform-origin:var(--steam-origin-x,50%) var(--steam-origin-y,50%)!important;opacity:.50!important;filter:none!important;mix-blend-mode:screen!important;pointer-events:none!important}
+  .signature-miso .steam-miso{opacity:.36!important;filter:blur(1px) contrast(.86)!important}
+  /* The Lab canvas is displayed against black.  Screen blending onto the
+     photographed steam needs this equivalent density, not a second white layer. */
+  .signature-miso .fx-canvas[data-effect="steam"]{opacity:.72!important;filter:brightness(2.45) grayscale(1) contrast(.76)!important;mix-blend-mode:screen!important}
+  .signature-miso .fx-canvas[data-effect="steam"]{pointer-events:auto!important;touch-action:pan-y!important;transform:scale(1.55)!important;transform-origin:66% 82%!important}
+  .signature-butter-corn .fx-canvas[data-effect="steam"]{opacity:.72!important;filter:brightness(2.45) grayscale(1) contrast(.76)!important;mix-blend-mode:screen!important;pointer-events:auto!important;touch-action:pan-y!important;transform:scale(1.12)!important;transform-origin:50% 45%!important}
+  .signature-tsubasa .fx-canvas[data-effect="steam"]{opacity:.64!important;filter:brightness(2.45) grayscale(1) contrast(.76)!important;mix-blend-mode:screen!important;pointer-events:auto!important;touch-action:pan-y!important;transform:scale(1.06)!important;transform-origin:61% 44%!important}
+  .signature-tsubasa .fx-canvas[data-effect="steam"]{opacity:.78!important}
+  .signature-tsubasa .steam-tsubasa-b{display:none!important}
+  .signature-tsubasa .fx-steam{opacity:.44!important}
+}
+.qr-restore{display:flex;align-items:center;gap:18px;margin-top:34px;padding-top:22px;border-top:1px solid #33251d}
+.qr-restore img{width:132px;height:auto;background:#fff;padding:5px}
+.qr-restore div{font:400 14px/1.6 "Yu Mincho",serif}.qr-restore small{display:block;color:var(--gold);letter-spacing:.18em;font-size:9px}
+@media(max-width:700px){.qr-restore{gap:14px;margin-top:22px}.qr-restore img{width:116px}}
+.limited-pending{background-image:url('assets/spicy-miso-limited.png')!important;background-size:cover!important;background-position:center!important}
+#fluidTextCanvas{pointer-events:auto!important;touch-action:pan-y!important}
+.fluid-touch-ink{pointer-events:none!important}
+@media(min-width:701px){.fluid-touch-ink{display:none!important}}
+@media(max-width:700px){
+  #fluidTextCanvas,.shop-photo.fluid-effect-stage .fluid-text-canvas{mix-blend-mode:normal!important;opacity:1!important}
+}

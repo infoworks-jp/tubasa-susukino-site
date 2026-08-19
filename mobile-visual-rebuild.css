@@ -1,0 +1,152 @@
+/* 2026-08-18 mobile visual rebuild: match the approved desktop framing. */
+.shop-section .steam-shop {
+  display: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transform: translate(-11%, -3%) scale(.86) !important;
+  transform-origin: 50% 50% !important;
+}
+
+/* 2026-08-18 regression restoration. Keep desktop framing unchanged. */
+.fluid-effect-stage .fluid-text-canvas{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:1;display:block;pointer-events:auto;touch-action:pan-y}
+.shop-photo.fluid-effect-stage{overflow:hidden;touch-action:pan-y;cursor:crosshair}
+.shop-photo.fluid-effect-stage .fluid-text-canvas{z-index:1;mix-blend-mode:screen!important}
+.fluid-touch-ink{z-index:4!important;pointer-events:none!important;mix-blend-mode:screen!important}
+.shop-photo.fluid-ready{background:none}
+.shop-photo.webgpu-unavailable{background:url("assets/store-interior.webp") center/cover no-repeat}
+.steam-butter-corn{mix-blend-mode:screen;opacity:.58;transform:translateX(-10%)!important;pointer-events:none}
+.food-card small{display:block;color:var(--gold);font-size:9px;letter-spacing:.22em;margin-bottom:5px}
+.menu-panel.active{display:flex;flex-direction:column;gap:24px}
+.menu-panel.active .menu-sheet-card{order:1;position:static;width:100%;max-width:none}
+.menu-panel.active .menu-text-list{order:2;width:100%}
+.menu-sheet-card button{display:block}
+.menu-sheet-card img{max-height:none}
+
+@media (max-width:700px){
+  .hero{height:100dvh;min-height:100svh}
+  .fluid-text-stage>picture,.hero-bg{position:absolute;inset:0;width:100%;height:100%}
+  .hero-bg{object-fit:cover!important;object-position:50% 50%!important;background:none}
+  .hero-logo{top:calc(env(safe-area-inset-top) + 5dvh)!important;height:24svh!important;max-width:28vw!important}
+  .hero-copy,.hero-copy.reveal.in{left:5vw!important;bottom:max(2.2svh,env(safe-area-inset-bottom))!important;max-width:90vw!important;width:90vw}
+  .hero-copy h1{font-size:clamp(38px,10.5vw,54px)!important;margin-bottom:.12em}
+  .signature-miso .media,.signature-butter-corn .media{object-fit:cover!important;object-position:50% 45%!important;transform:scale(1.12)!important;transform-origin:50% 45%!important}
+  .signature-tsubasa .media{object-fit:cover!important;object-position:55% 42%!important;transform:scale(1.08)!important;transform-origin:55% 42%!important}
+  .signature .fx-steam{opacity:.44!important;filter:blur(.7px) contrast(.92)!important;mix-blend-mode:screen!important;pointer-events:none!important}
+  .steam-butter-corn{transform:translateX(-13%)!important}
+  .signature-tsubasa .steam-tsubasa-a{transform:translate(-4%,0)!important}
+  .signature-tsubasa .steam-tsubasa-b{transform:translate(4%,0)!important}
+  .shop-section{min-height:82dvh}
+  .menu-panel.active{gap:12px}
+  .menu-panel.active .menu-sheet-card{order:1}
+  .menu-panel.active .menu-text-list{order:2}
+}
+
+@media (max-width: 700px) {
+  .hero-logo {
+    top: 1.5svh !important;
+    height: 27svh !important;
+    max-width: 29vw !important;
+  }
+
+  .hero-copy,
+  .hero-copy.reveal.in {
+    bottom: max(1.6svh, env(safe-area-inset-bottom)) !important;
+  }
+
+  .hero-copy p {
+    margin-bottom: 0;
+  }
+
+  .signature-miso .media {
+    object-position: 50% 45% !important;
+    transform: scale(1.08) !important;
+    transform-origin: 50% 45% !important;
+  }
+
+  .signature-butter-corn .media {
+    object-position: 50% 45% !important;
+    transform: scale(1.08) !important;
+  }
+
+  .signature-tsubasa .media {
+    object-fit: cover !important;
+    object-position: 61% 42% !important;
+    transform: scale(1.03) !important;
+    transform-origin: 61% 42% !important;
+  }
+
+  .signature .fx-steam {
+    opacity: .48 !important;
+    filter: blur(.45px) contrast(.96) !important;
+    mix-blend-mode: screen !important;
+  }
+
+  .signature-tsubasa .fx-steam {
+    opacity: .43 !important;
+  }
+
+  .signature-tsubasa .steam-tsubasa-a {
+    transform: translate(13%, 0) !important;
+  }
+
+  .signature-tsubasa .steam-tsubasa-b {
+    transform: translate(-16%, 0) !important;
+  }
+
+  .shop-section .steam-shop {
+    display: block;
+    opacity: .34 !important;
+    transform: translate(-14%, -1%) scale(.78) !important;
+  }
+}
+
+@media (max-width:700px){
+  .hero{height:100dvh!important;min-height:100svh!important}
+  .fluid-text-stage>picture,.hero-bg{position:absolute;inset:0;width:100%;height:100%}
+  .hero-bg{object-fit:cover!important;object-position:50% 50%!important;background:none!important}
+  .hero-logo{top:calc(env(safe-area-inset-top) + 5dvh)!important;height:24svh!important;max-width:28vw!important}
+  .hero-copy,.hero-copy.reveal.in{left:5vw!important;bottom:max(2.2svh,env(safe-area-inset-bottom))!important;max-width:90vw!important;width:90vw!important}
+  .signature-miso .media,.signature-butter-corn .media{object-position:50% 45%!important;transform:scale(1.12)!important;transform-origin:50% 45%!important}
+  .signature-tsubasa .media{object-fit:cover!important;object-position:55% 42%!important;transform:scale(1.08)!important;transform-origin:55% 42%!important}
+  .signature .fx-steam{opacity:.07!important;filter:blur(1.4px) contrast(.78)!important;mix-blend-mode:screen!important}
+  .steam-butter-corn{transform:translateX(-13%)!important}
+  .signature-tsubasa .steam-tsubasa-a{transform:translate(-4%,0)!important}
+  .signature-tsubasa .steam-tsubasa-b{transform:translate(4%,0)!important}
+  .shop-section .steam-shop{display:none!important}
+}
+
+@media (max-width:700px){
+  .hero-logo{
+    top:var(--hero-logo-top,18svh)!important;
+    height:24svh!important;
+    max-width:28vw!important;
+    z-index:4!important;
+  }
+  .signature-miso .media{
+    object-position:66% 82%!important;
+    transform:scale(1.55)!important;
+    transform-origin:66% 82%!important;
+  }
+  .signature-butter-corn .media{
+    object-position:50% 45%!important;
+    transform:scale(1.12)!important;
+    transform-origin:50% 45%!important;
+  }
+  .signature-tsubasa .media{
+    object-position:61% 44%!important;
+    transform:scale(1.06)!important;
+    transform-origin:61% 44%!important;
+  }
+  .signature .fx-steam{
+    transform:none!important;
+    opacity:.42!important;
+    filter:none!important;
+    mix-blend-mode:screen!important;
+    pointer-events:none!important;
+  }
+  .signature-tsubasa .fx-steam{
+    opacity:.36!important;
+    filter:blur(1.35px) contrast(.88)!important;
+  }
+}

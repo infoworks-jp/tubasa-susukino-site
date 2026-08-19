@@ -1,0 +1,17 @@
+(()=>{
+  if(!matchMedia('(max-width:700px)').matches)return;
+  const stages=[document.querySelector('#fluidTextStage'),document.querySelector('.shop-photo')].filter(Boolean);
+  const mount=stage=>{
+    if(stage.querySelector('.fluid-showcase'))return;
+    const canvas=document.createElement('canvas');canvas.className='fluid-showcase';Object.assign(canvas.style,{position:'absolute',inset:'0',width:'100%',height:'100%',zIndex:'4',pointerEvents:'auto',touchAction:'pan-y',mixBlendMode:'screen'});stage.append(canvas);
+    const ctx=canvas.getContext('2d'),inside=stage.classList.contains('shop-photo');let w=1,h=1,d=1,particles=[],last=performance.now(),active=false;
+    const resize=()=>{const r=stage.getBoundingClientRect();d=Math.min(devicePixelRatio||1,1.5);w=Math.max(1,r.width);h=Math.max(1,r.height);canvas.width=Math.round(w*d);canvas.height=Math.round(h*d);ctx.setTransform(d,0,0,d,0,0)};
+    const inject=(event,boost=1)=>{const t=event.touches?.[0]||event.changedTouches?.[0]||event,r=stage.getBoundingClientRect();if(!t)return;const x=t.clientX-r.left,y=t.clientY-r.top;active=true;const count=inside?15:32;for(let i=0;i<count;i++){const a=(i/count)*Math.PI*2+(Math.random()-.5)*(inside?.18:.32),s=boost*(inside?(.55+Math.random()*1.2):(1.5+Math.random()*3.6));particles.push({x,y,px:x,py:y,vx:Math.cos(a)*s,vy:(inside?-1.15:-.7)+Math.sin(a)*s,life:1,age:0,seed:Math.random()*20,width:inside?(1.15+Math.random()*1.35):(.70+Math.random()*1.9)})}if(particles.length>340)particles.splice(0,particles.length-340)};
+    const draw=now=>{const dt=Math.min(.035,(now-last)/1000);last=now;ctx.clearRect(0,0,w,h);for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.age+=dt;p.life-=dt*(inside?.34:.50);if(p.life<=0){particles.splice(i,1);continue}p.px=p.x;p.py=p.y;const curl=Math.sin(p.y*.018+p.seed+now*.0011)*(inside?.60:.75)+Math.cos(p.x*.012-p.seed-now*.0009)*(inside?.34:.42);p.vx+=curl*dt*(inside?16:28);p.vy+=Math.cos(p.x*.014+p.seed)*dt*(inside?6:11);p.vx*=inside?.986:.975;p.vy*=inside?.986:.978;p.x+=p.vx;p.y+=p.vy;const alpha=Math.pow(p.life,1.55)*(inside?.52:.54);ctx.beginPath();ctx.moveTo(p.px,p.py);ctx.quadraticCurveTo((p.px+p.x)*.5+curl*(inside?3.4:4),(p.py+p.y)*.5-(inside?11:5),p.x,p.y);ctx.lineWidth=p.width*(inside?(1.05+p.life):(.60+p.life));ctx.strokeStyle=inside?`rgba(195,235,255,${alpha})`:`rgba(145,210,255,${alpha})`;ctx.shadowBlur=inside?16:16;ctx.shadowColor=inside?'rgba(92,175,225,.78)':'rgba(85,155,255,.72)';ctx.stroke()}ctx.shadowBlur=0;if(particles.length)requestAnimationFrame(draw);else active=false};
+    const start=e=>{const wasEmpty=particles.length===0;inject(e,1.5);if(wasEmpty)requestAnimationFrame(draw)};
+    const move=e=>{if(e.touches||e.buttons)inject(e,.34)};
+    const input=canvas;
+    input.addEventListener('pointerdown',start,{passive:true});input.addEventListener('pointermove',move,{passive:true});input.addEventListener('touchstart',start,{passive:true});input.addEventListener('touchmove',move,{passive:true});stage.addEventListener('touchstart',start,{passive:true});stage.addEventListener('touchmove',move,{passive:true});addEventListener('resize',resize,{passive:true});resize();if(new URLSearchParams(location.search).has('debug-fluid'))setTimeout(()=>{const r=stage.getBoundingClientRect();start({clientX:r.left+w*.5,clientY:r.top+h*.5})},300);
+  };
+  const boot=()=>stages.forEach(mount);boot();setTimeout(boot,800);setTimeout(boot,2200);
+})();

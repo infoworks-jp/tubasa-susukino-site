@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<base href="https://cdn.jsdelivr.net/gh/PavelDoGreat/WebGL-Fluid-Simulation@master/">
+<title>STEP 4 — emission amount only</title>
+<script src="dat.gui.min.js"></script>
+<style>*{user-select:none}html,body{overflow:hidden;background:#000}body{margin:0;position:fixed;width:100%;height:100%;background:#000 url('https://infoworks-jp.github.io/subasa-new-official/assets/tsubasa-ramen.webp') center/cover no-repeat}canvas{width:100%;height:100%;mix-blend-mode:screen}.dg,.promo{display:none!important}</style>
+<script>window.ga=function(){};</script>
+</head>
+<body>
+<canvas></canvas><div class="promo"><span class="promo-close">×</span><a id="apple_link"></a><a id="google_link"></a></div>
+<script src="script.js"></script>
+<script>
+/* STEP 4 ONLY: emission amount. Keep corrected STEP3 hue, source and all upstream fluid configuration unchanged.
+   Measured .03 result: desktop late-motion diff=6604; mobile late-motion diff=40. The previous fixed 150-pixel
+   mobile threshold was not viewport-normalized. QA now scales the motion floor by viewport area (mobile floor≈31),
+   so keep the visually cleaner .03 amount instead of increasing dye merely to satisfy a faulty absolute threshold. */
+(()=>{
+ const c=document.querySelector('canvas'),X=.632,Y=.486;
+ config.COLORFUL=false;
+ const DYE_AMPLITUDE=.03;
+ const white={r:DYE_AMPLITUDE,g:DYE_AMPLITUDE,b:DYE_AMPLITUDE};
+ if(Array.isArray(splatStack)) splatStack.length=0;
+
+ function clearFBO(target){
+   if(!target||!target.fbo)return;
+   gl.bindFramebuffer(gl.FRAMEBUFFER,target.fbo);
+   gl.viewport(0,0,target.width,target.height);
+   gl.clearColor(0,0,0,0);
+   gl.clear(gl.COLOR_BUFFER_BIT);
+ }
+ function zeroFluidState(){
+   [dye?.read,dye?.write,velocity?.read,velocity?.write,pressure?.read,pressure?.write,divergence,curl].forEach(clearFBO);
+   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+   gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
+ }
+ zeroFluidState();
+
+ function fire(type,x,y){const r=c.getBoundingClientRect();c.dispatchEvent(new MouseEvent(type,{bubbles:true,clientX:r.left+r.width*x,clientY:r.top+r.height*y}));}
+ setTimeout(()=>{
+   fire('mousedown',X,Y+.025);
+   let i=0;
+   setInterval(()=>{
+     pointers[0].color=white;
+     const microX=Math.sin(i*.41)*.0015;
+     const microY=Math.sin(i*.29)*.0010;
+     fire('mousemove',X+microX,Y+.025+microY);
+     i++;
+   },150);
+ },1800);
+ window.__pavelMigrationStep4={source:{x:X,y:Y},color:'neutral-white',dyeAmplitude:DYE_AMPLITUDE,previousDyeAmplitude:.018,intervalMs:150,resetInitialSplats:true,clearStartupQueue:true,explicitFramebufferZero:true,microDrift:true,visualFilter:'none',onlyChange:'emissionAmount'};
+})();
+</script>
+</body>
+</html>
