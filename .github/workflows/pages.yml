@@ -25,7 +25,9 @@ jobs:
       - name: Require complete site assets
         run: |
           set -euo pipefail
-          for f in index.html style.css app.js assets/ultimate-miso.webp assets/tsubasa-ramen.webp assets/susukino-top.webp assets/store-interior.webp assets/menu-ja.webp assets/menu-en.webp assets/menu-zh.webp assets/menu-ko.webp assets/logo-vertical.svg; do test -s "$f"; done
+          for f in index.html style.css app.js assets/ultimate-miso.webp assets/tsubasa-ramen.webp assets/susukino-top.webp assets/store-interior.webp assets/menu-ja.webp assets/menu-en.webp assets/menu-zh.webp assets/menu-ko.webp assets/logo-vertical.svg; do
+            test -s "$f" || { echo "Missing required asset: $f"; exit 1; }
+          done
       - uses: actions/configure-pages@v5
         with:
           enablement: true
