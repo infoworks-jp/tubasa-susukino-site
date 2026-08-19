@@ -77,32 +77,23 @@ async function initWebGL(stage,{subtle=false}={}){
 async function initWebGPU(stage,{subtle=false}={}){
   let renderer;
   try{
-    // PC browsers without WebGPU must keep the same interactive effect through
-    // the WebGL2 three-fluid-fx pipeline.  A static image is only the final
-    // fallback when neither GPU API can run.
-    if(reduced){fallback(stage,'reduced motion');return}
-    if(!('gpu' in navigator)){await initWebGL(stage,{subtle});return}
+    if(!('gpu' in navigator)||reduced){fallback(stage,reduced?'reduced motion':'WebGPU unavailable');return}
     const [webgpu,tsl,fluidFx]=await Promise.all([import('https://esm.sh/three@0.183.2/webgpu'),import('https://esm.sh/three@0.183.2/tsl'),import('https://esm.sh/three-fluid-fx@0.1.0/tsl?deps=three@0.183.2')]);
     const {RenderPipeline,WebGPURenderer}=webgpu,{pass,uniform}=tsl,{attachPointerSplats,FluidSimulation,fluidOverlay,simpleDistortion}=fluidFx;
     renderer=new WebGPURenderer({antialias:true,forceWebGL:false});renderer.outputColorSpace=SRGBColorSpace;renderer.toneMapping=ACESFilmicToneMapping;renderer.setClearColor(new Color('#07080b'),1);
     const canvas=mountCanvas(stage,renderer);await renderer.init();
     const {scene,camera,texture,material,mesh,fit}=await commonScene(stage);
-    const fluid=new FluidSimulation(renderer,{profile:'performance',splatRadius:subtle?.00115:.0013,splatForce:subtle?15:19,pressureIterations:9,curlStrength:.18,velocityDissipation:.99,densityDissipation:.94,pressureDissipation:.8,enableVorticity:false,bfecc:true,reflectWalls:false});
+    const fluid=new FluidSimulation(renderer,{profile:'performance',splatRadius:.00105,splatForce:subtle?10:14,pressureIterations:9,curlStrength:.18,velocityDissipation:.99,densityDissipation:.94,pressureDissipation:.8,enableVorticity:false,bfecc:true,reflectWalls:false});
     fluid.enableDye=true;fluid.dyeDissipation=.965;
-    const distortion=uniform(subtle?.82:1.18),intensity=uniform(subtle?.64:1.36),opacity=uniform(subtle?.31:.7),velocity=uniform(subtle?1.3:1.62),elapsed=uniform(0),texel=uniform(new Vector2(1/512,1/512)),cursor=uniform(new Color(.85,.95,1)),vibrance=uniform(subtle?.66:.72);
+    const distortion=uniform(subtle?.42:.78),intensity=uniform(subtle?.26:1.18),opacity=uniform(subtle?.075:.64),velocity=uniform(subtle?1.08:1.45),elapsed=uniform(0),texel=uniform(new Vector2(1/512,1/512)),cursor=uniform(new Color(.85,.95,1)),vibrance=uniform(subtle?.35:.56);
     let output=simpleDistortion(pass(scene,camera),fluid.densityNode,distortion);output=fluidOverlay('artInk',output,fluid.densityNode,fluid.dyeNode,fluid.velocityNode,{intensity,opacity,time:elapsed,texel,cursorColor:cursor,vibrance,velocityScale:velocity});
     const pipeline=new RenderPipeline(renderer);pipeline.outputNode=output;pipeline.needsUpdate=true;const detach=attachPointerSplats(canvas,fluid,{coloredStrokes:true});
-    // `attachPointerSplats` draws a stroke on movement.  Add a genuine fluid
-    // impulse on press as well, so the effect never appears to be missing
-    // until the mouse has already travelled across the photograph.
-    const pressSplat=(event)=>{const rect=canvas.getBoundingClientRect();if(rect.width<1||rect.height<1)return;const x=(event.clientX-rect.left)/rect.width,y=1-(event.clientY-rect.top)/rect.height;fluid.addSplat?.(x,y,0,subtle?125:150,{radius:subtle?.0012:.0014,dyeColor:[.72,.86,1]})};
-    canvas.addEventListener('pointerdown',pressSplat,{passive:true});
     const resize=()=>{const width=Math.max(1,stage.clientWidth),height=Math.max(1,stage.clientHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();fluid.resize(width,height);const image=fluid.dyeTexture.image;texel.value.set(1/(image.width||512),1/(image.height||512));fit()};
     resize();addEventListener('resize',resize,{passive:true});visualViewport?.addEventListener('resize',resize,{passive:true});
     const timer=new Timer(),STEP=1/60,MAX=3;let accumulator=0,frame=0,active=true;const observer=new IntersectionObserver(entries=>{active=entries[0]?.isIntersecting??true},{rootMargin:'120px'});observer.observe(stage);
     renderer.setAnimationLoop(()=>{if(!active)return;timer.update();const dt=Math.min(Math.max(timer.getDelta(),1e-6),STEP*MAX);elapsed.value=timer.getElapsed();accumulator+=dt;let steps=0;while(accumulator>=STEP&&steps<MAX){fluid.step(STEP);accumulator-=STEP;steps++}if(steps===MAX)accumulator=0;pipeline.render();frame++;if(frame===2)stage.classList.add('fluid-ready');setState(stage,{engine:'three-fluid-fx-fluid-text',pipeline:'TSL',renderer:'WebGPU',profile:'performance',pointer:true,touch:true,mobile,subtle,frame})});
-    addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);detach?.();canvas.removeEventListener('pointerdown',pressSplat);observer.disconnect();material.dispose();mesh.geometry.dispose();texture.dispose();fluid.dispose?.();renderer.dispose()},{once:true});
-  }catch(error){console.error('[Tsubasa Fluid WebGPU]',error);renderer?.domElement?.remove();await initWebGL(stage,{subtle})}
+    addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);detach?.();observer.disconnect();material.dispose();mesh.geometry.dispose();texture.dispose();fluid.dispose?.();renderer.dispose()},{once:true});
+  }catch(error){console.error('[Tsubasa Fluid WebGPU]',error);renderer?.domElement?.remove();fallback(stage,String(error?.message||error))}
 }
 
 if(mobile){
