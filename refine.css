@@ -13,3 +13,17 @@
 @media(max-width:700px){.signature-butter-corn .media{object-position:50% 45%;transform:scale(1.08)}.hero-copy h1 em{filter:drop-shadow(calc(var(--fx-x,0)*.22px) calc(var(--fx-y,0)*.22px) 8px rgba(202,225,244,.32))}}
 .signature-tsubasa .fx-steam{opacity:.44!important;filter:blur(1.35px) contrast(.88);mix-blend-mode:screen}
 @media(max-width:700px){.signature-tsubasa .fx-steam{opacity:.40!important;filter:blur(1px) contrast(.9)}}
+
+/* Desktop product balance: the miso bowl is framed smaller in its source
+   photo than the butter-corn bowl. Scale the photo and its steam layer
+   together so the bowl has the same visual weight without changing mobile. */
+@media (min-width:701px){
+  .signature-miso .media{
+    transform:translateX(-6%) scale(1.34)!important;
+    transform-origin:67% 68%!important;
+  }
+  .signature-miso .fx-steam{
+    transform:translateX(-6%) scale(1.34)!important;
+    transform-origin:67% 68%!important;
+  }
+}

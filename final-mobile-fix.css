@@ -21,6 +21,14 @@
 .qr-restore div{font:400 14px/1.6 "Yu Mincho",serif}.qr-restore small{display:block;color:var(--gold);letter-spacing:.18em;font-size:9px}
 @media(max-width:700px){.qr-restore{gap:14px;margin-top:22px}.qr-restore img{width:116px}}
 .limited-pending{background-image:url('assets/spicy-miso-limited.png')!important;background-size:cover!important;background-position:center!important}
+/* Keep the desktop miso steam canvas in the same transformed frame as the
+   enlarged product photo. Mobile rules below remain authoritative. */
+@media (min-width:701px){
+  .signature-miso .fx-steam{
+    transform:translateX(-6%) scale(1.34)!important;
+    transform-origin:67% 68%!important;
+  }
+}
 #fluidTextCanvas{pointer-events:auto!important;touch-action:pan-y!important}
 .fluid-touch-ink{pointer-events:none!important}
 @media(min-width:701px){.fluid-touch-ink{display:none!important}}
