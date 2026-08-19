@@ -22,3 +22,15 @@ if(dialog){dialog.querySelector('.close').onclick=()=>dialog.close();dialog.addE
 const tabs=[...document.querySelectorAll('.menu-tab')],panels=[...document.querySelectorAll('.menu-panel')];tabs.forEach(tab=>tab.addEventListener('click',()=>{const lang=tab.dataset.lang;tabs.forEach(t=>t.classList.toggle('active',t===tab));panels.forEach(p=>p.classList.toggle('active',p.dataset.panel===lang))}));
 window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCount:MENU.ja.length,languages:Object.keys(MENU)};
 })();
+
+// The access-section QR is shared by desktop and mobile.  Keep the visual and
+// its label tied to the production URL rather than the previous Instagram code.
+(()=>{
+  const qr=document.querySelector('.access-section .qr-restore');
+  const image=qr?.querySelector('img');
+  const copy=qr?.querySelector('div');
+  if(!image||!copy)return;
+  image.src='assets/tubasa-susukino-site-qr.png';
+  image.alt='味一番つばさ公式サイト 二次元コード';
+  copy.innerHTML='<small>OFFICIAL WEBSITE</small>www.tubasa-susukino.com<br>スマートフォンで読み取れます';
+})();
