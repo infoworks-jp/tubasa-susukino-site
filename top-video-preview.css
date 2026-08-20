@@ -47,9 +47,17 @@
 }
 
 @media (max-width:700px) {
-  .video-top .top-logo-plaque { top:64px; right:18px; width:132px; }
-  .video-top .hero-copy { left:24px; bottom:116px; }
+  /* Copy, CTA and mark each have their own area in the first mobile view. */
+  .video-top .top-logo-plaque { top:64px; right:18px; width:104px; }
+  .video-top .hero-copy { left:24px; bottom:max(154px, calc(120px + env(safe-area-inset-bottom))); }
   .video-top .hero-copy h1 { font-size:clamp(48px,15vw,72px); }
-  .video-top .top-cm { left:24px; right:24px; bottom:28px; }
-  .video-top .top-cm .cm-open { width:100%; }
+  .video-top .top-cm { left:24px; right:auto; bottom:max(22px, calc(14px + env(safe-area-inset-bottom))); }
+  .video-top .top-cm .cm-open { width:auto; min-height:58px; padding:9px 12px; gap:10px; }
+  .video-top .top-cm .cm-open-mark { width:34px; height:34px; flex-basis:34px; font-size:13px; box-shadow:0 0 0 4px rgba(181,34,30,.18); }
+  .video-top .top-cm .cm-open span:nth-child(2) { font-size:11px; line-height:1.18; }
+  .video-top .top-cm .cm-open b { font-size:16px; }
+  .video-top .top-cm .cm-open small { display:none; }
+  .video-top .top-scroll { position:absolute; z-index:8; right:20px; bottom:max(28px, calc(18px + env(safe-area-inset-bottom))); display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.82); font-size:8px; letter-spacing:.19em; writing-mode:vertical-rl; text-shadow:0 2px 12px #000; pointer-events:none; }
+  .video-top .top-scroll::after { content:"↓"; color:#d3a652; font-size:15px; line-height:1; }
+  .site-header.video-hero-active nav { display:none; }
 }
