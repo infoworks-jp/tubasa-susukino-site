@@ -34,3 +34,18 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
   image.alt='味一番つばさ公式サイト 二次元コード';
   copy.innerHTML='<small>OFFICIAL WEBSITE</small>www.tubasa-susukino.com<br>スマートフォンで読み取れます';
 })();
+
+(()=>{
+  const openCm=document.querySelector('#openCm');
+  if(!openCm)return;
+  const cmDialog=document.createElement('dialog');
+  cmDialog.id='cmDialog';cmDialog.className='cm-dialog';cmDialog.setAttribute('aria-labelledby','cmTitle');
+  cmDialog.innerHTML='<button class="close cm-close" aria-label="CMを閉じる">×</button><h2 id="cmTitle">つばさラーメン 商品CM</h2><div class="cm-video-wrap"><video id="cmVideo" controls playsinline preload="none"><source src="https://infoworks-jp.github.io/subasa-new-official/assets/video/tsubasa-cm-vertical.mp4" type="video/mp4"></video></div>';
+  document.body.append(cmDialog);
+  const cmVideo=cmDialog.querySelector('#cmVideo');
+  const resetCm=()=>{cmVideo.pause();cmVideo.currentTime=0};
+  openCm.addEventListener('click',()=>{cmDialog.showModal();cmVideo.play().catch(()=>{})});
+  cmDialog.querySelector('.cm-close').addEventListener('click',()=>cmDialog.close());
+  cmDialog.addEventListener('click',e=>{if(e.target===cmDialog)cmDialog.close()});
+  cmDialog.addEventListener('close',resetCm);
+})();
