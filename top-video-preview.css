@@ -1,5 +1,6 @@
 .video-top {
-  min-height: 100svh;
+  height: 100svh !important;
+  min-height: 100svh !important;
   background: #000;
 }
 
