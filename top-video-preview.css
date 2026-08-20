@@ -1,0 +1,42 @@
+.video-top {
+  min-height: 100svh;
+  background: #000;
+}
+
+.video-top .film-background { filter: brightness(.68) contrast(1.12) saturate(1.08); }
+.video-top .film-shade { z-index: 2; }
+
+.video-top .top-vertical-logo {
+  position: absolute;
+  z-index: 7;
+  top: 84px;
+  right: clamp(20px, 4vw, 64px);
+  width: clamp(46px, 5vw, 72px);
+  height: auto;
+  filter: drop-shadow(0 2px 12px rgba(0,0,0,.8));
+}
+
+.video-top .hero-copy {
+  z-index: 8;
+  left: clamp(26px, 6vw, 96px);
+  bottom: clamp(72px, 11vh, 130px);
+}
+
+.video-top .hero-copy h1 {
+  margin: 0;
+  font-size: clamp(58px, 8vw, 126px);
+  line-height: .88;
+  letter-spacing: .12em;
+  text-shadow: 0 5px 28px rgba(0,0,0,.72);
+}
+
+.video-top .hero-copy h1 em { font-style: normal; }
+.video-top .top-cm { position:absolute; z-index:8; left:clamp(26px,6vw,96px); bottom:clamp(28px,5vh,58px); }
+
+@media (max-width:700px) {
+  .video-top .top-vertical-logo { top:72px; right:18px; width:42px; }
+  .video-top .hero-copy { left:24px; bottom:116px; }
+  .video-top .hero-copy h1 { font-size:clamp(48px,15vw,72px); }
+  .video-top .top-cm { left:24px; right:24px; bottom:28px; }
+  .video-top .top-cm .cm-open { width:100%; }
+}
