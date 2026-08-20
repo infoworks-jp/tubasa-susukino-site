@@ -49,3 +49,16 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
   cmDialog.addEventListener('click',e=>{if(e.target===cmDialog)cmDialog.close()});
   cmDialog.addEventListener('close',resetCm);
 })();
+
+(()=>{
+  if(new URLSearchParams(location.search).get('preview')!=='top-video')return;
+  const top=document.querySelector('#top');
+  if(!top)return;
+  const css=document.createElement('link');css.rel='stylesheet';css.href='top-video-preview.css?v=1';document.head.append(css);
+  top.outerHTML='<section id="top" class="scene hero film-scene video-top"><video class="film-background" autoplay muted loop playsinline preload="metadata" poster="assets/tsubasa-ramen.webp" aria-hidden="true"><source src="https://infoworks-jp.github.io/subasa-new-official/assets/video/tsubasa-top-mobile.mp4" media="(max-width: 700px)" type="video/mp4"><source src="https://infoworks-jp.github.io/subasa-new-official/assets/video/tsubasa-top-pc.mp4" type="video/mp4"></video><div class="film-shade" aria-hidden="true"></div><img class="top-vertical-logo" src="assets/logo-vertical.svg" alt="味一番つばさ"><div class="hero-copy"><h1>おいしい、<br><em>らーめん。</em></h1></div><div class="top-cm"><button id="openCm" class="cm-open" type="button"><span class="cm-open-mark" aria-hidden="true">▶</span><span>つばさラーメン<br><b>商品CMを見る</b></span><small>音あり・14秒</small></button></div></section>';
+  document.querySelector('#film')?.remove();
+  const openCm=document.querySelector('#openCm');
+  const cmDialog=document.querySelector('#cmDialog');
+  const cmVideo=document.querySelector('#cmVideo');
+  openCm?.addEventListener('click',()=>{cmDialog.showModal();cmVideo.play().catch(()=>{})});
+})();
