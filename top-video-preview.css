@@ -1,10 +1,11 @@
 .video-top {
   height: 100svh !important;
   min-height: 100svh !important;
-  background: #000;
+  background: #000 url("assets/tsubasa-top-poster-pc.webp") center / cover no-repeat;
 }
 
-.video-top .film-background { filter: brightness(.68) contrast(1.12) saturate(1.08); }
+.video-top .film-background { opacity:0; filter: brightness(.68) contrast(1.12) saturate(1.08); transition:opacity .18s ease-out; }
+.video-top.video-ready .film-background { opacity:1; }
 .video-top .film-shade { z-index: 2; }
 
 .video-top .top-logo-plaque {
@@ -48,6 +49,7 @@
 }
 
 @media (max-width:700px) {
+  .video-top { background-image:url("assets/tsubasa-top-poster-mobile.webp"); }
   /* Copy, CTA and mark each have their own area in the first mobile view. */
   .video-top .top-logo-plaque { top:64px; right:18px; width:104px; }
   .video-top .hero-copy { left:24px; bottom:max(208px, calc(174px + env(safe-area-inset-bottom)))!important; }
