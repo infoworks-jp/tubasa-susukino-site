@@ -49,7 +49,7 @@
 @media (max-width:700px) {
   /* Copy, CTA and mark each have their own area in the first mobile view. */
   .video-top .top-logo-plaque { top:64px; right:18px; width:104px; }
-  .video-top .hero-copy { left:24px; bottom:max(154px, calc(120px + env(safe-area-inset-bottom))); }
+  .video-top .hero-copy { left:24px; bottom:max(208px, calc(174px + env(safe-area-inset-bottom)))!important; }
   .video-top .hero-copy h1 { font-size:clamp(48px,15vw,72px); }
   .video-top .top-cm { left:24px; right:auto; bottom:max(22px, calc(14px + env(safe-area-inset-bottom))); }
   .video-top .top-cm .cm-open { width:auto; min-height:58px; padding:9px 12px; gap:10px; }
