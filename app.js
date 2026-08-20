@@ -51,7 +51,6 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
 })();
 
 (()=>{
-  if(new URLSearchParams(location.search).get('preview')!=='top-video')return;
   const top=document.querySelector('#top');
   if(!top)return;
   const css=document.createElement('link');css.rel='stylesheet';css.href='top-video-preview.css?v=6';document.head.append(css);
