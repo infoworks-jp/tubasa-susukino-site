@@ -40,7 +40,7 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
   if(!openCm)return;
   const cmDialog=document.createElement('dialog');
   cmDialog.id='cmDialog';cmDialog.className='cm-dialog';cmDialog.setAttribute('aria-labelledby','cmTitle');
-  cmDialog.innerHTML='<button class="close cm-close" aria-label="CMを閉じる">×</button><h2 id="cmTitle">つばさラーメン 商品CM</h2><div class="cm-video-wrap"><video id="cmVideo" controls playsinline preload="none"><source src="https://infoworks-jp.github.io/subasa-new-official/assets/video/tsubasa-cm-vertical.mp4" type="video/mp4"></video></div>';
+  cmDialog.innerHTML='<button class="close cm-close" aria-label="CMを閉じる">×</button><h2 id="cmTitle">つばさラーメン 商品CM</h2><div class="cm-video-wrap"><video id="cmVideo" controls playsinline preload="none"><source src="assets/video/tsubasa-cm-vertical.mp4" type="video/mp4"></video></div>';
   document.body.append(cmDialog);
   const cmVideo=cmDialog.querySelector('#cmVideo');
   const resetCm=()=>{cmVideo.pause();cmVideo.currentTime=0};
@@ -54,7 +54,7 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
   const top=document.querySelector('#top');
   if(!top)return;
   const css=document.createElement('link');css.rel='stylesheet';css.href='top-video-preview.css?v=8';document.head.append(css);
-  top.insertAdjacentHTML('beforebegin','<section id="videoTop" class="scene hero film-scene video-top"><video class="film-background" autoplay muted loop playsinline preload="auto" aria-hidden="true"><source src="https://infoworks-jp.github.io/subasa-new-official/assets/video/tsubasa-top-mobile.mp4" media="(max-width: 700px)" type="video/mp4"><source src="https://infoworks-jp.github.io/subasa-new-official/assets/video/tsubasa-top-pc.mp4" type="video/mp4"></video><div class="film-shade" aria-hidden="true"></div><div class="top-logo-plaque"><img class="top-logo" src="assets/tsubasa-logo-white.png?v=1" alt="味一番つばさ"></div><div class="hero-copy"><h1><span>おいしい、</span><em>らーめん。</em></h1></div><div class="top-cm"><button id="openCmPreview" class="cm-open" type="button"><span class="cm-open-mark" aria-hidden="true">▶</span><span>つばさラーメン<br><b>商品CMを見る</b></span><small>音あり・14秒</small></button></div><span class="top-scroll" aria-hidden="true">SCROLL</span></section><div class="film-transition" aria-hidden="true"></div>');
+  top.insertAdjacentHTML('beforebegin','<section id="videoTop" class="scene hero film-scene video-top"><video class="film-background" autoplay muted loop playsinline preload="auto" aria-hidden="true"><source src="assets/video/tsubasa-top-mobile.mp4" media="(max-width: 700px)" type="video/mp4"><source src="assets/video/tsubasa-top-pc.mp4" type="video/mp4"></video><div class="film-shade" aria-hidden="true"></div><div class="top-logo-plaque"><img class="top-logo" src="assets/tsubasa-logo-white.png?v=1" alt="味一番つばさ"></div><div class="hero-copy"><h1><span>おいしい、</span><em>らーめん。</em></h1></div><div class="top-cm"><button id="openCmPreview" class="cm-open" type="button"><span class="cm-open-mark" aria-hidden="true">▶</span><span>つばさラーメン<br><b>商品CMを見る</b></span><small>音あり・14秒</small></button></div><span class="top-scroll" aria-hidden="true">SCROLL</span></section><div class="film-transition" aria-hidden="true"></div>');
   document.querySelector('#film')?.remove();
   const header=document.querySelector('.site-header');
   const videoTop=document.querySelector('#videoTop');

@@ -1,0 +1,12 @@
+{
+  "name": "tubasa-susukino-site",
+  "private": true,
+  "scripts": {
+    "build:fluid": "esbuild fluid-text.js --bundle --format=esm --target=es2022 --minify --outfile=vendor/fluid-text.bundle.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.9",
+    "three": "0.183.2",
+    "three-fluid-fx": "0.1.0"
+  }
+}

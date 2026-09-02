@@ -1,0 +1,19 @@
+{
+  "name": "味一番つばさ 公式サイト",
+  "repository": "infoworks-jp/tubasa-susukino-site",
+  "branch": "main",
+  "publicUrl": "https://www.tubasa-susukino.com/",
+  "pagesUrl": "https://infoworks-jp.github.io/tubasa-susukino-site/",
+  "runtime": "GitHub Pages",
+  "chatgptProRequired": false,
+  "entry": "index.html",
+  "editableFiles": [
+    "index.html",
+    "app.js",
+    "fluid-text.js",
+    "style.css"
+  ],
+  "localAssets": "assets/",
+  "generatedRuntime": "vendor/fluid-text.bundle.js",
+  "externalRuntimeServices": ["Google Maps"]
+}

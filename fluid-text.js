@@ -2,7 +2,7 @@ import {
   ACESFilmicToneMapping,Color,LinearFilter,Mesh,MeshBasicMaterial,
   PerspectiveCamera,PlaneGeometry,Scene,SRGBColorSpace,TextureLoader,Timer,
   Vector2,WebGLRenderer,
-} from 'https://esm.sh/three@0.183.2';
+} from 'three';
 
 const mobile=matchMedia('(max-width:700px)').matches;
 const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -33,10 +33,10 @@ async function initWebGL(stage,{subtle=false}={}){
   let renderer;
   try{
     const [fluidFx,{EffectComposer},{RenderPass},{OutputPass}]=await Promise.all([
-      import('https://esm.sh/three-fluid-fx@0.1.0?deps=three@0.183.2'),
-      import('https://esm.sh/three@0.183.2/examples/jsm/postprocessing/EffectComposer.js'),
-      import('https://esm.sh/three@0.183.2/examples/jsm/postprocessing/RenderPass.js'),
-      import('https://esm.sh/three@0.183.2/examples/jsm/postprocessing/OutputPass.js'),
+      import('three-fluid-fx'),
+      import('three/examples/jsm/postprocessing/EffectComposer.js'),
+      import('three/examples/jsm/postprocessing/RenderPass.js'),
+      import('three/examples/jsm/postprocessing/OutputPass.js'),
     ]);
     const {ArtInkOverlayPass,FluidSimulation,SimpleDistortionPass,attachPointerSplats}=fluidFx;
     renderer=new WebGLRenderer({alpha:true,antialias:false,powerPreference:'high-performance'});
@@ -78,7 +78,7 @@ async function initWebGPU(stage,{subtle=false}={}){
   let renderer;
   try{
     if(!('gpu' in navigator)||reduced){fallback(stage,reduced?'reduced motion':'WebGPU unavailable');return}
-    const [webgpu,tsl,fluidFx]=await Promise.all([import('https://esm.sh/three@0.183.2/webgpu'),import('https://esm.sh/three@0.183.2/tsl'),import('https://esm.sh/three-fluid-fx@0.1.0/tsl?deps=three@0.183.2')]);
+    const [webgpu,tsl,fluidFx]=await Promise.all([import('three/webgpu'),import('three/tsl'),import('three-fluid-fx/tsl')]);
     const {RenderPipeline,WebGPURenderer}=webgpu,{pass,uniform}=tsl,{attachPointerSplats,FluidSimulation,fluidOverlay,simpleDistortion}=fluidFx;
     renderer=new WebGPURenderer({antialias:true,forceWebGL:false});renderer.outputColorSpace=SRGBColorSpace;renderer.toneMapping=ACESFilmicToneMapping;renderer.setClearColor(new Color('#07080b'),1);
     const canvas=mountCanvas(stage,renderer);await renderer.init();
