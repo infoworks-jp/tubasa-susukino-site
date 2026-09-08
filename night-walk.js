@@ -34,9 +34,9 @@
       container: mapNode,
       style: 'https://tiles.openfreemap.org/styles/fiord',
       center: route[0],
-      zoom: 18.2,
-      pitch: 74,
-      bearing: 102,
+      zoom: 18.55,
+      pitch: 62,
+      bearing: 94,
       attributionControl: true,
       cooperativeGestures: true,
       maxBounds: [[141.349, 43.052], [141.359, 43.059]],
@@ -109,7 +109,7 @@
         const raw = Math.min(1, (now - started) / duration);
         const t = raw < .5 ? 2 * raw * raw : 1 - Math.pow(-2 * raw + 2, 2) / 2;
         const center = pointAt(t);
-        instance.jumpTo({ center, zoom: 18.35 + Math.sin(t * Math.PI) * .38, pitch: 76, bearing: 102 + Math.sin(t * Math.PI * 2) * 3 });
+        instance.jumpTo({ center, zoom: 18.55 + Math.sin(t * Math.PI) * .26, pitch: 62, bearing: 94 + Math.sin(t * Math.PI * 2) * 4 });
         const step = Math.min(labels.length - 1, Math.floor(raw * labels.length));
           status.textContent = labels[step];
           shell.style.setProperty('--walk-progress', `${Math.round(raw * 100)}%`);
@@ -135,4 +135,12 @@
   };
 
   button.addEventListener('click', play);
+
+  /* Warm the map only when the section is near the viewport. The visible
+     photograph remains the fallback if tiles, WebGL, or the network fail. */
+  new IntersectionObserver((entries, observer) => {
+    if (!entries[0].isIntersecting) return;
+    observer.disconnect();
+    setupMap().then(() => shell.classList.add('map-ready')).catch(() => {});
+  }, { rootMargin: '320px 0px' }).observe(shell);
 })();

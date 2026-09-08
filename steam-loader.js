@@ -1,8 +1,18 @@
 (()=>{
-  // One shared solver drives every bowl on desktop and mobile.  Keeping a
-  // single animation loop avoids loading three near-identical GPU engines on
-  // phones and lets off-screen/visibility throttling work consistently.
-  const script=document.createElement('script');
-  script.src='effects.js?v=natural-steam-map-20260908';
-  document.body.appendChild(script);
+  const target=document.querySelector('#signature');
+  if(!target)return;
+  const load=()=>{
+    if(document.querySelector('script[data-steam-engine]'))return;
+    const script=document.createElement('script');
+    script.src='effects.js?v=experience-20260908-1';
+    script.dataset.steamEngine='';
+    document.body.appendChild(script);
+  };
+  if(!('IntersectionObserver'in window)){load();return;}
+  const observer=new IntersectionObserver(entries=>{
+    if(!entries[0].isIntersecting)return;
+    observer.disconnect();
+    load();
+  },{rootMargin:'320px 0px'});
+  observer.observe(target);
 })();

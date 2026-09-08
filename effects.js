@@ -52,7 +52,7 @@ void main(){
       stencil: false,
       antialias: false,
       premultipliedAlpha: false,
-      preserveDrawingBuffer: true,
+      preserveDrawingBuffer: false,
     });
     if (!gl || !gl.getExtension("EXT_color_buffer_float")) return null;
     gl.getExtension("OES_texture_float_linear");
@@ -396,12 +396,15 @@ void main(){
       });
     }
   }
-  const resize = () => sims.forEach((s) => {
-    s.sim.alloc();
-    s.syncSource();
-  });
+  let resizeTimer;
+  const resize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => sims.forEach((s) => {
+      s.sim.alloc();
+      s.syncSource();
+    }), 120);
+  };
   addEventListener("resize", resize, { passive: true });
-  visualViewport?.addEventListener("resize", resize, { passive: true });
   let last = performance.now(), pageVisible = !document.hidden;
   document.addEventListener("visibilitychange", () => {
     pageVisible = !document.hidden;

@@ -3,7 +3,7 @@ const limited=document.querySelector('.limited-pending');
 if(limited){
   limited.classList.remove('limited-pending');
   limited.setAttribute('aria-label','期間限定 特製辛味噌ラーメン');
-  limited.innerHTML='<img src="assets/spicy-miso-limited.png" alt="期間限定 特製辛味噌ラーメン"><div><small>LIMITED</small><h3>特製辛味噌ラーメン</h3><p>¥1,200</p></div>';
+  limited.innerHTML='<img src="assets/spicy-miso-limited.png" alt="期間限定 特製辛味噌ラーメン" loading="lazy"><div><small>LIMITED</small><h3>特製辛味噌ラーメン</h3><p>¥1,200</p></div>';
 }
 const els=[...document.querySelectorAll('.reveal')];
 if('IntersectionObserver'in window){const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.15});els.forEach(e=>io.observe(e))}else els.forEach(e=>e.classList.add('in'));
@@ -36,7 +36,7 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
 })();
 
 (()=>{
-  const openCm=document.querySelector('#openCm');
+  const openCm=document.querySelector('#openCmPreview, #openCm');
   if(!openCm)return;
   const cmDialog=document.createElement('dialog');
   cmDialog.id='cmDialog';cmDialog.className='cm-dialog';cmDialog.setAttribute('aria-labelledby','cmTitle');
@@ -51,16 +51,17 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
 })();
 
 (()=>{
-  const top=document.querySelector('#top');
-  if(!top)return;
-  const css=document.createElement('link');css.rel='stylesheet';css.href='top-video-preview.css?v=8';document.head.append(css);
-  top.insertAdjacentHTML('beforebegin','<section id="videoTop" class="scene hero film-scene video-top"><video class="film-background" autoplay muted loop playsinline preload="auto" aria-hidden="true"><source src="assets/video/tsubasa-top-mobile.mp4" media="(max-width: 700px)" type="video/mp4"><source src="assets/video/tsubasa-top-pc.mp4" type="video/mp4"></video><div class="film-shade" aria-hidden="true"></div><div class="top-logo-plaque"><img class="top-logo" src="assets/tsubasa-logo-white.png?v=1" alt="味一番つばさ"></div><div class="hero-copy"><h1><span>おいしい、</span><em>らーめん。</em></h1></div><div class="top-cm"><button id="openCmPreview" class="cm-open" type="button"><span class="cm-open-mark" aria-hidden="true">▶</span><span>つばさラーメン<br><b>商品CMを見る</b></span><small>音あり・14秒</small></button></div><span class="top-scroll" aria-hidden="true">SCROLL</span></section><div class="film-transition" aria-hidden="true"></div>');
-  document.querySelector('#film')?.remove();
   const header=document.querySelector('.site-header');
   const videoTop=document.querySelector('#videoTop');
   const topVideo=videoTop?.querySelector('video');
   if(topVideo){
     topVideo.muted=true;
+    const loadVideo=()=>{
+      if(topVideo.dataset.loaded)return;
+      topVideo.querySelectorAll('source[data-src]').forEach(source=>{source.src=source.dataset.src});
+      topVideo.dataset.loaded='1';
+      topVideo.load();
+    };
     const startVideo=()=>topVideo.play().catch(()=>{});
     const startAtFirstVisibleFrame=()=>{
       if(!topVideo.dataset.startPosition){
@@ -72,11 +73,9 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
     topVideo.addEventListener('loadedmetadata',startAtFirstVisibleFrame,{once:true});
     topVideo.addEventListener('playing',()=>videoTop.classList.add('video-ready'),{once:true});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)startVideo()});
-    if(topVideo.readyState>=1)startAtFirstVisibleFrame();
+    const scheduleVideo=()=>('requestIdleCallback'in window?requestIdleCallback(loadVideo,{timeout:1800}):setTimeout(loadVideo,900));
+    if(document.readyState==='complete')scheduleVideo();
+    else addEventListener('load',scheduleVideo,{once:true});
   }
   if(header&&videoTop&&'IntersectionObserver'in window)new IntersectionObserver(([entry])=>header.classList.toggle('video-hero-active',entry.isIntersecting),{threshold:.08}).observe(videoTop);
-  const openCm=document.querySelector('#openCmPreview');
-  const cmDialog=document.querySelector('#cmDialog');
-  const cmVideo=document.querySelector('#cmVideo');
-  openCm?.addEventListener('click',()=>{cmDialog.showModal();cmVideo.play().catch(()=>{})});
 })();
