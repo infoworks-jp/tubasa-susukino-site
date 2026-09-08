@@ -6,7 +6,9 @@
   if (!canvases.length) return;
   const fine = true,
     reduced = matchMedia("(prefers-reduced-motion:reduce)").matches,
-    mobile = matchMedia("(max-width:700px)").matches;
+    mobile = matchMedia("(max-width:700px)").matches,
+    lowPower = (navigator.hardwareConcurrency || 4) <= 4 ||
+      (navigator.deviceMemory || 4) <= 4;
   const VS = `#version 300 es
 precision highp float;in vec2 a;out vec2 uv,l,r,t,b;uniform vec2 texel;void main(){uv=a*.5+.5;l=uv-vec2(texel.x,0);r=uv+vec2(texel.x,0);t=uv+vec2(0,texel.y);b=uv-vec2(0,texel.y);gl_Position=vec4(a,0,1);}`;
   const SPLAT = `#version 300 es
@@ -26,7 +28,21 @@ precision highp float;in vec2 uv,l,r,t,b;out vec4 o;uniform sampler2D pressure,v
   const CLEAR = `#version 300 es
 precision highp float;in vec2 uv;out vec4 o;uniform sampler2D u;uniform float value;void main(){o=texture(u,uv)*value;}`;
   const DISPLAY = `#version 300 es
-precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){vec3 c=texture(dye,uv).rgb;float d=max(c.r,max(c.g,c.b));float a=${mobile ? "smoothstep(.018,.13,d)*.45" : "smoothstep(.006,.105,d)*.52"};vec3 steam=mix(vec3(.80,.83,.85),vec3(1.),smoothstep(.018,.14,d));o=vec4(steam,a);}`;
+precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;uniform float time;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+void main(){
+  vec2 drift=vec2(noise(vec2(uv.y*3.7-time*.055,time*.031))-.5,0.)*.014;
+  vec3 c=texture(dye,clamp(uv+drift,0.,1.)).rgb;
+  float d=max(c.r,max(c.g,c.b));
+  float broad=noise(vec2(uv.x*7.2+time*.036,uv.y*5.4-time*.029));
+  float fineGrain=noise(vec2(uv.x*18.0-time*.021,uv.y*14.0+time*.017));
+  float breakup=smoothstep(.22,.82,broad*.72+fineGrain*.28);
+  float base=${mobile ? "smoothstep(.014,.125,d)*.43" : "smoothstep(.005,.105,d)*.49"};
+  float a=base*(.47+.53*breakup);
+  vec3 steam=mix(vec3(.72,.75,.77),vec3(.96,.97,.98),smoothstep(.025,.16,d));
+  o=vec4(steam,a);
+}`;
   function make(c) {
     const gl = c.getContext("webgl2", {
       alpha: true,
@@ -138,11 +154,13 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
       const r = mobile
           ? c.parentElement.getBoundingClientRect()
           : c.getBoundingClientRect(),
-        base = mobile ? 56 : 80,
+        base = lowPower ? (mobile ? 48 : 64) : (mobile ? 64 : 88),
         effectiveDPR = Math.min(devicePixelRatio || 1, mobile ? 1.35 : 1.5);
       W = base;
       H = Math.max(56, Math.round((base * r.height) / r.width));
-      c.width = mobile ? Math.max(160, Math.round(r.width * effectiveDPR * 0.5)) : 192;
+      c.width = mobile
+        ? Math.max(160, Math.round(r.width * effectiveDPR * (lowPower ? 0.42 : 0.52)))
+        : lowPower ? 176 : 208;
       c.height = Math.max(120, Math.round((c.width * r.height) / r.width));
       velocity = double(gl.LINEAR);
       dye = double(gl.LINEAR);
@@ -230,12 +248,13 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
       draw(p, dye.write);
       dye.swap();
     }
-    function render() {
+    function render(now) {
       const p = P.display;
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.useProgram(p);
       bind(p, "dye", dye.read.texture, 0);
+      gl.uniform1f(uni(p, "time"), now * 0.001);
       draw(p, null, false);
       gl.disable(gl.BLEND);
     }
@@ -285,8 +304,12 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
       pointX = point.x + originX;
       pointY = point.y + originY;
     }
+    // The left Tsubasa plume originates just outside the cropped mobile
+    // photograph.  Start its continuation at the first visible part of the
+    // bowl instead of collapsing it against the viewport edge.
+    const minX = mobile && profile === "tsubasa-a" ? 0.08 : 0.02;
     return {
-      x: Math.max(0.02, Math.min(0.98, pointX / width)),
+      x: Math.max(minX, Math.min(0.98, pointX / width)),
       y: Math.max(0.02, Math.min(0.98, 1 - pointY / height)),
       natural: anchor,
       imageScale: transformScale,
@@ -315,6 +338,7 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
       nextEmit: 0,
       lastStep: 0,
       source: null,
+      phase: ({ miso: 0.4, butter: 2.1, "tsubasa-a": 4.0, "tsubasa-b": 5.7 })[profile] || 0,
     };
     const syncSource = () => {
       s.source = imageSource(profile, c);
@@ -370,15 +394,19 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
   });
   addEventListener("resize", resize, { passive: true });
   visualViewport?.addEventListener("resize", resize, { passive: true });
-  let last = performance.now();
+  let last = performance.now(), pageVisible = !document.hidden;
+  document.addEventListener("visibilitychange", () => {
+    pageVisible = !document.hidden;
+    last = performance.now();
+  }, { passive: true });
   function frame(now) {
     const dt = Math.min((now - last) / 1000, 0.025);
     last = now;
     for (const s of sims)
-      if (s.visible && now - s.lastStep >= (mobile ? 34 : 24)) {
+      if (pageVisible && s.visible && now - s.lastStep >= (lowPower ? 42 : mobile ? 34 : 26)) {
         s.lastStep = now;
         if (now >= s.nextEmit) {
-          const phase = now * 0.001,
+          const phase = now * 0.001 + s.phase,
             tsubasa = s.profile.startsWith("tsubasa");
           let srcX = mobile ? 0.66 : 0.605,
             srcY = mobile ? 0.5 : 0.5;
@@ -393,28 +421,31 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
             srcX = s.source.x;
             srcY = s.source.y;
           }
-          srcX +=
-            Math.sin(phase * 0.68 + (s.profile === "tsubasa-b" ? 2.2 : 0)) *
-            0.003;
+          const breath = .68 + .20 * Math.sin(phase * .41) +
+            .12 * Math.sin(phase * .17 + 1.8);
+          const wind = Math.sin(phase * .19 + Math.sin(phase * .071)) *
+            (tsubasa ? .62 : .85);
+          srcX += Math.sin(phase * 0.68) * 0.0035;
           for (let k = tsubasa ? -1 : -2; k <= (tsubasa ? 1 : 2); k++) {
-            const spread = tsubasa ? 0.0068 : 0.0042,
+            const spread = tsubasa ? 0.0064 : 0.0040,
               x =
                 srcX +
                 k * spread +
-                Math.sin(phase * (tsubasa ? 0.72 : 1.05) + k) * 0.0022,
+                Math.sin(phase * (tsubasa ? 0.72 : 1.05) + k) * 0.0028,
               y = srcY + Math.abs(k) * 0.0015;
             s.sim.splat(
               x,
               y,
-              Math.sin(phase * (tsubasa ? 0.92 : 1.55) + k * 2.1) *
-                (tsubasa ? 1.35 : 2.4),
-              (tsubasa ? 20 : 27) + Math.cos(phase + k) * (tsubasa ? 2.5 : 4),
-              tsubasa ? (mobile ? 0.038 : 0.092) : mobile ? 0.045 : 0.145,
+              wind + Math.sin(phase * (tsubasa ? 0.92 : 1.37) + k * 2.1) *
+                (tsubasa ? 1.15 : 1.85),
+              ((tsubasa ? 19 : 25) + Math.cos(phase + k) * (tsubasa ? 2.5 : 3.5)) * breath,
+              (tsubasa ? (mobile ? 0.034 : 0.080) : mobile ? 0.040 : 0.122) * breath,
               (tsubasa ? 0.00016 + k * k * 0.000009 : 0.00009 + k * k * 0.000006) *
                 (mobile ? 0.35 : 1),
             );
           }
-          s.nextEmit = now + (tsubasa ? (mobile ? 104 : 82) : mobile ? 72 : 54);
+          const irregular = .82 + .34 * (.5 + .5 * Math.sin(phase * 1.73 + s.phase));
+          s.nextEmit = now + (tsubasa ? (mobile ? 108 : 86) : mobile ? 78 : 60) * irregular;
         }
         s.sim.step(dt);
         if (s.pointer) {
@@ -428,7 +459,7 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
           );
           s.pointer = null;
         }
-        s.sim.render();
+        s.sim.render(now);
       }
     if (!reduced) requestAnimationFrame(frame);
   }
@@ -443,6 +474,7 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D dye;void main(){ve
     mobile,
     profiles: sims.map((s) => s.profile),
     calibration: mobile ? "image-coordinate-anchor-2026-08-18" : "desktop-approved-2026-08-17",
+    quality: lowPower ? "adaptive-low" : "adaptive-high",
     anchors: Object.fromEntries(sims.map((s) => [s.profile, s.source])),
   };
 })();

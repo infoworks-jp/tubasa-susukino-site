@@ -13,7 +13,7 @@
   .signature-butter-corn .fx-canvas[data-effect="steam"]{opacity:.72!important;filter:brightness(2.45) grayscale(1) contrast(.76)!important;mix-blend-mode:screen!important;pointer-events:auto!important;touch-action:pan-y!important;transform:scale(1.12)!important;transform-origin:50% 45%!important}
   .signature-tsubasa .fx-canvas[data-effect="steam"]{opacity:.64!important;filter:brightness(2.45) grayscale(1) contrast(.76)!important;mix-blend-mode:screen!important;pointer-events:auto!important;touch-action:pan-y!important;transform:scale(1.06)!important;transform-origin:61% 44%!important}
   .signature-tsubasa .fx-canvas[data-effect="steam"]{opacity:.78!important}
-  .signature-tsubasa .steam-tsubasa-b{display:none!important}
+  .signature-tsubasa .steam-tsubasa-b{display:block!important}
   .signature-tsubasa .fx-steam{opacity:.44!important}
 }
 .qr-restore{display:flex;align-items:center;gap:18px;margin-top:34px;padding-top:22px;border-top:1px solid #33251d}
