@@ -346,6 +346,7 @@ void main(){
       source: null,
       phase: ({ miso: 0.4, butter: 2.1, "tsubasa-a": 4.0, "tsubasa-b": 5.7, favorites: 1.25 })[profile] || 0,
       favoriteCursor: 0,
+      emissions: 0,
     };
     const syncSource = () => {
       s.source = imageSource(profile, c);
@@ -419,24 +420,25 @@ void main(){
             const grid = s.c.parentElement;
             const cards = [...grid.querySelectorAll('.food-card')];
             const gr = grid.getBoundingClientRect();
-            // Emit into two cards per pulse. Every card receives the same
-            // continuous, low-density surface steam within one short cycle.
-            for (let n = 0; n < 2; n++) {
+            // Four staggered sources keep all eight cards visibly alive while
+            // retaining one shared WebGL context for the entire grid.
+            for (let n = 0; n < 4; n++) {
               const card = cards[(s.favoriteCursor + n) % cards.length];
               const r = card.getBoundingClientRect();
-              const x = (r.left - gr.left + r.width * (.42 + .10 * Math.sin(phase + n))) / gr.width;
-              const y = 1 - (r.top - gr.top + r.height * .57) / gr.height;
+              const x = (r.left - gr.left + r.width * (.46 + .13 * Math.sin(phase * .71 + n * 1.9))) / gr.width;
+              const y = 1 - (r.top - gr.top + r.height * .54) / gr.height;
               for (let k = -1; k <= 1; k++) s.sim.splat(
-                x + k * .012,
+                x + k * .014,
                 y + Math.abs(k) * .003,
-                Math.sin(phase * .57 + k * 1.8) * .62,
-                10.5 + Math.sin(phase * .37 + k) * 1.8,
-                mobile ? .022 : .032,
-                mobile ? .00010 : .00015,
+                Math.sin(phase * .57 + k * 1.8 + n) * 1.15,
+                12.5 + Math.sin(phase * .37 + k + n) * 2.4,
+                mobile ? .026 : .038,
+                mobile ? .00018 : .00024,
               );
+              s.emissions++;
             }
-            s.favoriteCursor = (s.favoriteCursor + 2) % cards.length;
-            s.nextEmit = now + (mobile ? 118 : 96);
+            s.favoriteCursor = (s.favoriteCursor + 4) % cards.length;
+            s.nextEmit = now + (mobile ? 132 : 108);
             s.sim.step(dt);
             s.sim.render(now);
             continue;
@@ -507,6 +509,11 @@ void main(){
         s.sim.render(now);
       }
     if (!reduced) requestAnimationFrame(frame);
+    if (window.__tsubasaEffects) {
+      window.__tsubasaEffects.emissions = Object.fromEntries(
+        sims.map((s) => [s.profile, s.emissions]),
+      );
+    }
   }
   if (!reduced) requestAnimationFrame(frame);
   window.__tsubasaEffects = {

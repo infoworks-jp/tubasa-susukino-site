@@ -7,11 +7,11 @@
 /* One shared fluid layer serves all eight favorites without creating eight
    additional WebGL contexts. */
 .food-grid{position:relative;isolation:isolate}
-.favorites-steam{position:absolute;inset:0;width:100%;height:100%;z-index:2;display:block;pointer-events:none;mix-blend-mode:screen;opacity:.46;filter:blur(.65px) contrast(.9)}
+.favorites-steam{position:absolute;inset:0;width:100%;height:100%;z-index:2;display:block;pointer-events:none;mix-blend-mode:screen;opacity:.64;filter:blur(.5px) contrast(1.02)}
 .food-card{z-index:1}
 .food-card::after{z-index:3;pointer-events:none}
 .food-card>div{z-index:4}
-@media(max-width:700px){.favorites-steam{opacity:.40;filter:blur(.5px) contrast(.88)}}
+@media(max-width:700px){.favorites-steam{opacity:.56;filter:blur(.4px) contrast(.98)}}
 
 /* Reveal the lower crossing and road while keeping the mobile portrait crop. */
 @media(min-width:701px){#fluidTextStage .hero-bg{object-fit:cover!important;object-position:center 72%!important}}
