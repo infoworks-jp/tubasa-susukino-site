@@ -479,16 +479,18 @@ void main(){
                 (mobile ? 0.35 : 1),
             );
           }
-          // A faint blanket rises from the wider noodle surface. These broad,
-          // low-density splats keep the photo breathing even without input.
-          for (const [i, offset] of [-.19, -.095, .095, .19].entries()) {
+          // A faint blanket rises from the wider noodle surface. On mobile it
+          // must stay much lighter than the main plume; otherwise accumulated
+          // dye turns into a detached cloud above the bowl.
+          const surfaceOffsets = mobile ? [-.11, .11] : [-.19, -.095, .095, .19];
+          for (const [i, offset] of surfaceOffsets.entries()) {
             s.sim.splat(
               Math.max(.04, Math.min(.96, srcX + offset)),
               srcY - .018 - Math.abs(offset) * .025,
               wind * .45 + Math.sin(phase * .43 + i) * .34,
-              8.5 + 1.4 * Math.sin(phase * .31 + i * 1.7),
-              mobile ? .010 : .020,
-              mobile ? .00018 : .00030,
+              (mobile ? 5.8 : 8.5) + 1.4 * Math.sin(phase * .31 + i * 1.7),
+              mobile ? .008 : .020,
+              mobile ? .000025 : .00030,
             );
           }
           const irregular = .82 + .34 * (.5 + .5 * Math.sin(phase * 1.73 + s.phase));

@@ -6,6 +6,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.9",
+    "maplibre-gl": "^6.8.0",
     "three": "0.183.2",
     "three-fluid-fx": "0.1.0"
   }
