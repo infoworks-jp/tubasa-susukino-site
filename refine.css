@@ -3,6 +3,18 @@
 .hero-copy,.hero-copy.reveal.in{transform:translate3d(calc(var(--fx-x,0)*1px),calc(var(--fx-y,0)*1px),0) skew(calc(var(--fx-x,0)*.025deg),calc(var(--fx-y,0)*.02deg));transition:transform .08s linear;text-shadow:0 2px 22px rgba(0,0,0,.82),calc(var(--fx-x,0)*.34px) calc(var(--fx-y,0)*.34px) 24px rgba(175,205,235,.28)}
 .hero-copy h1 em{position:relative;display:inline-block;color:#f3ede2;font-style:normal;filter:drop-shadow(calc(var(--fx-x,0)*.18px) calc(var(--fx-y,0)*.18px) 9px rgba(202,225,244,.35));transform:translate3d(calc(var(--fx-x,0)*.16px),calc(var(--fx-y,0)*.12px),0) skewX(calc(var(--fx-x,0)*.04deg));will-change:transform,filter}
 .hero-copy h1 em::after{content:"四半世紀。";position:absolute;inset:0;color:#d3a652;opacity:calc(var(--fx-energy,.16)*.16);transform:translate(calc(var(--fx-x,0)*-.10px),calc(var(--fx-y,0)*-.08px));filter:blur(.7px);pointer-events:none}
+
+/* One shared fluid layer serves all eight favorites without creating eight
+   additional WebGL contexts. */
+.food-grid{position:relative;isolation:isolate}
+.favorites-steam{position:absolute;inset:0;width:100%;height:100%;z-index:2;display:block;pointer-events:none;mix-blend-mode:screen;opacity:.46;filter:blur(.65px) contrast(.9)}
+.food-card{z-index:1}
+.food-card::after{z-index:3;pointer-events:none}
+.food-card>div{z-index:4}
+@media(max-width:700px){.favorites-steam{opacity:.40;filter:blur(.5px) contrast(.88)}}
+
+/* Reveal the lower crossing and road while keeping the mobile portrait crop. */
+@media(min-width:701px){#fluidTextStage .hero-bg{object-fit:cover!important;object-position:center 72%!important}}
 .signature-butter-corn .media{object-position:50% 48%;transform:scale(1.02)}
 .butter-corn-veil{background:linear-gradient(270deg,#000c 0,#0005 42%,transparent 70%),linear-gradient(0deg,#030202 0,transparent 45%)}
 .price-list{font-size:clamp(20px,2.2vw,31px);line-height:1.45}

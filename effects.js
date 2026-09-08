@@ -2,6 +2,7 @@
 (() => {
   const canvases = [
     ...document.querySelectorAll('.signature .fx-canvas[data-effect="steam"]'),
+    ...document.querySelectorAll('.food-grid .favorites-steam[data-effect="steam"]'),
   ];
   if (!canvases.length) return;
   const fine = true,
@@ -44,6 +45,7 @@ void main(){
   o=vec4(steam,a);
 }`;
   function make(c) {
+    const favorites = c.dataset.profile === "favorites";
     const gl = c.getContext("webgl2", {
       alpha: true,
       depth: false,
@@ -154,13 +156,17 @@ void main(){
       const r = mobile
           ? c.parentElement.getBoundingClientRect()
           : c.getBoundingClientRect(),
-        base = lowPower ? (mobile ? 48 : 64) : (mobile ? 64 : 88),
+        base = favorites
+          ? (lowPower ? 104 : 144)
+          : lowPower ? (mobile ? 48 : 64) : (mobile ? 64 : 88),
         effectiveDPR = Math.min(devicePixelRatio || 1, mobile ? 1.35 : 1.5);
       W = base;
       H = Math.max(56, Math.round((base * r.height) / r.width));
-      c.width = mobile
-        ? Math.max(160, Math.round(r.width * effectiveDPR * (lowPower ? 0.42 : 0.52)))
-        : lowPower ? 176 : 208;
+      c.width = favorites
+        ? Math.min(720, Math.max(320, Math.round(r.width * effectiveDPR * (lowPower ? .34 : .46))))
+        : mobile
+          ? Math.max(160, Math.round(r.width * effectiveDPR * (lowPower ? 0.42 : 0.52)))
+          : lowPower ? 176 : 208;
       c.height = Math.max(120, Math.round((c.width * r.height) / r.width));
       velocity = double(gl.LINEAR);
       dye = double(gl.LINEAR);
@@ -338,7 +344,8 @@ void main(){
       nextEmit: 0,
       lastStep: 0,
       source: null,
-      phase: ({ miso: 0.4, butter: 2.1, "tsubasa-a": 4.0, "tsubasa-b": 5.7 })[profile] || 0,
+      phase: ({ miso: 0.4, butter: 2.1, "tsubasa-a": 4.0, "tsubasa-b": 5.7, favorites: 1.25 })[profile] || 0,
+      favoriteCursor: 0,
     };
     const syncSource = () => {
       s.source = imageSource(profile, c);
@@ -408,6 +415,32 @@ void main(){
         if (now >= s.nextEmit) {
           const phase = now * 0.001 + s.phase,
             tsubasa = s.profile.startsWith("tsubasa");
+          if (s.profile === "favorites") {
+            const grid = s.c.parentElement;
+            const cards = [...grid.querySelectorAll('.food-card')];
+            const gr = grid.getBoundingClientRect();
+            // Emit into two cards per pulse. Every card receives the same
+            // continuous, low-density surface steam within one short cycle.
+            for (let n = 0; n < 2; n++) {
+              const card = cards[(s.favoriteCursor + n) % cards.length];
+              const r = card.getBoundingClientRect();
+              const x = (r.left - gr.left + r.width * (.42 + .10 * Math.sin(phase + n))) / gr.width;
+              const y = 1 - (r.top - gr.top + r.height * .57) / gr.height;
+              for (let k = -1; k <= 1; k++) s.sim.splat(
+                x + k * .012,
+                y + Math.abs(k) * .003,
+                Math.sin(phase * .57 + k * 1.8) * .62,
+                10.5 + Math.sin(phase * .37 + k) * 1.8,
+                mobile ? .022 : .032,
+                mobile ? .00010 : .00015,
+              );
+            }
+            s.favoriteCursor = (s.favoriteCursor + 2) % cards.length;
+            s.nextEmit = now + (mobile ? 118 : 96);
+            s.sim.step(dt);
+            s.sim.render(now);
+            continue;
+          }
           let srcX = mobile ? 0.66 : 0.605,
             srcY = mobile ? 0.5 : 0.5;
           if (s.profile === "tsubasa-a") {
@@ -442,6 +475,18 @@ void main(){
               (tsubasa ? (mobile ? 0.034 : 0.080) : mobile ? 0.040 : 0.122) * breath,
               (tsubasa ? 0.00016 + k * k * 0.000009 : 0.00009 + k * k * 0.000006) *
                 (mobile ? 0.35 : 1),
+            );
+          }
+          // A faint blanket rises from the wider noodle surface. These broad,
+          // low-density splats keep the photo breathing even without input.
+          for (const [i, offset] of [-.19, -.095, .095, .19].entries()) {
+            s.sim.splat(
+              Math.max(.04, Math.min(.96, srcX + offset)),
+              srcY - .018 - Math.abs(offset) * .025,
+              wind * .45 + Math.sin(phase * .43 + i) * .34,
+              8.5 + 1.4 * Math.sin(phase * .31 + i * 1.7),
+              mobile ? .010 : .020,
+              mobile ? .00018 : .00030,
             );
           }
           const irregular = .82 + .34 * (.5 + .5 * Math.sin(phase * 1.73 + s.phase));
