@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pressureQA } from "./steam-pressure-qa.mjs";
+import { fingerQA } from "./steam-finger-qa.mjs";
 const require = createRequire(
   process.env.STEAM_QA_PLAYWRIGHT || import.meta.url,
 );
@@ -346,6 +347,37 @@ for (const name of names) {
       mobile,
     );
     result.errors.push(...result.pressure.errors);
+    const approvedSource = await fs.readFile(
+      new URL("./fixtures/steam-approved-4e6b68e.js", import.meta.url),
+      "utf8",
+    );
+    const approved = await pressureQA(context, base, undefined, approvedSource);
+    result.errors.push(...approved.errors);
+    result.preservation = result.pressure.results.map((s, i) => ({
+      profile: s.profile,
+      rootIndex: s.rootIndex,
+      ambientExact: s.controlSHA256 === approved.results[i].controlSHA256,
+      pressureExact:
+        s.fraction === approved.results[i].fraction &&
+        s.meanDifference === approved.results[i].meanDifference,
+    }));
+    if (result.preservation.some((s) => !s.ambientExact || !s.pressureExact))
+      fail(`Approved steam changed: ${JSON.stringify(result.preservation)}`);
+    result.finger = await fingerQA(
+      context,
+      base,
+      async (fingerPage, label) => {
+        const filename = `${name}-${label}.jpg`;
+        await fingerPage.screenshot({
+          path: path.join(directory, filename),
+          type: "jpeg",
+          quality: 85,
+        });
+        result.screenshots.push(filename);
+      },
+      mobile,
+    );
+    result.errors.push(...result.finger.errors);
     // A GPU failure must keep original photographs and text readable.
     const fallback = await context.newPage();
     await fallback.addInitScript(() => {

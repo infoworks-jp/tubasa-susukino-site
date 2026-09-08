@@ -48,22 +48,6 @@ precision highp float;in vec2 uv;out vec4 o;uniform sampler2D u;uniform vec2 poi
 precision highp float;in vec2 uv;out vec4 o;uniform sampler2D velocity,source;uniform vec2 texel;uniform float dt,dissipation;void main(){vec2 coord=uv-dt*texture(velocity,uv).xy*texel;o=texture(source,coord)/(1.+dissipation*dt);}`;
   const DIV = `#version 300 es
 precision highp float;in vec2 uv,l,r,t,b;out vec4 o;uniform sampler2D velocity;void main(){float L=texture(velocity,l).x,R=texture(velocity,r).x,T=texture(velocity,t).y,B=texture(velocity,b).y;o=vec4(.5*(R-L+T-B),0,0,1);}`;
-  // Limited MacCormack correction retains thin fingertip strands instead of
-  // letting repeated bilinear advection diffuse them into a grey brush mark.
-  // This pass is used only by the temporary finger field, never ambient steam.
-  const CORRECT = `#version 300 es
-precision highp float;in vec2 uv;out vec4 o;
-uniform sampler2D velocity,source,forwardDye;uniform vec2 texel;uniform float dt,dissipation;
-void main(){
- vec2 travel=dt*texture(velocity,uv).xy*texel;
- vec2 back=uv-travel;
- vec2 cell=(floor(back/texel-.5)+.5)*texel;
- float decay=1.+dissipation*dt;
- vec3 a=texture(source,cell).rgb/decay,b=texture(source,cell+vec2(texel.x,0)).rgb/decay;
- vec3 c=texture(source,cell+vec2(0,texel.y)).rgb/decay,d=texture(source,cell+texel).rgb/decay;
- vec3 corrected=texture(forwardDye,uv).rgb+.5*(texture(source,uv).rgb/decay-texture(forwardDye,uv+travel).rgb);
- o=vec4(clamp(corrected,min(min(a,b),min(c,d)),max(max(a,b),max(c,d))),1.);
-}`;
   const CURL = `#version 300 es
 precision highp float;in vec2 l,r,t,b;out vec4 o;uniform sampler2D velocity;void main(){float L=texture(velocity,l).y,R=texture(velocity,r).y,T=texture(velocity,t).x,B=texture(velocity,b).x;o=vec4(.5*(R-L-T+B),0,0,1);}`;
   const VORT = `#version 300 es
@@ -133,18 +117,6 @@ void main(){
  color=1.-(1.-color)*(1.-vec3(.80,.82,.83)*veil);
  o=vec4(color,1.);
 }`;
-  // Keep the approved idle shader byte-for-byte. A separate variant composites
-  // new vapor only while a finger field exists; no extra idle texture samples.
-  const FINGER_DISPLAY = DISPLAY.replace(
-    "uniform sampler2D photo,velocity,dye;",
-    "uniform sampler2D photo,velocity,dye,fingerDye;",
-  ).replace(
-    " o=vec4(color,1.);",
-    ` float fd=texture(fingerDye,uv).r;
- float alpha=(1.-exp(-fd*2.8))*.52*motionAmount;
- color=1.-(1.-color)*(1.-vec3(.80,.82,.83)*alpha);
- o=vec4(color,1.);`,
-  );
   const compile = (type, source) => {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -159,7 +131,6 @@ void main(){
     for (const [name, source] of Object.entries({
       splat: SPLAT,
       advection: ADV,
-      correct: CORRECT,
       divergence: DIV,
       curl: CURL,
       vorticity: VORT,
@@ -168,7 +139,6 @@ void main(){
       clear: CLEAR,
       buoyancy: BUOYANCY,
       display: DISPLAY,
-      fingerDisplay: FINGER_DISPLAY,
     })) {
       const p = gl.createProgram(),
         frag = compile(gl.FRAGMENT_SHADER, source);
@@ -284,16 +254,13 @@ void main(){
     );
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
-  function allocateFluid(s) {
+  function allocate(s) {
     current = s;
     s.velocity = pair(s);
     s.dye = pair(s);
     s.pressure = pair(s, gl.NEAREST);
     s.divergence = texture(s.w, s.h, gl.NEAREST);
     s.curl = texture(s.w, s.h, gl.NEAREST);
-  }
-  function allocate(s) {
-    allocateFluid(s);
     s.photo = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, s.photo);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -325,7 +292,7 @@ void main(){
     draw(s.dye.write);
     s.dye.swap();
   }
-  function step(s, dt, t, dyeDissipation = 0.9) {
+  function step(s, dt, t) {
     let u = use("buoyancy");
     bind(u, "velocity", s.velocity.read.texture, 0);
     bind(u, "dye", s.dye.read.texture, 1);
@@ -372,18 +339,8 @@ void main(){
     s.velocity.swap();
     bind(u, "velocity", s.velocity.read.texture, 0);
     bind(u, "source", s.dye.read.texture, 1);
-    gl.uniform1f(u.dissipation, dyeDissipation);
+    gl.uniform1f(u.dissipation, 0.9);
     draw(s.dye.write);
-    if (s.detail) {
-      u = use("correct");
-      bind(u, "velocity", s.velocity.read.texture, 0);
-      bind(u, "source", s.dye.read.texture, 1);
-      bind(u, "forwardDye", s.dye.write.texture, 2);
-      gl.uniform1f(u.dt, dt);
-      gl.uniform1f(u.dissipation, dyeDissipation);
-      draw(s.detail);
-      [s.detail, s.dye.write] = [s.dye.write, s.detail];
-    }
     s.dye.swap();
   }
   function sync(s) {
@@ -426,11 +383,10 @@ void main(){
       output.width = c.width;
       output.height = c.height;
     }
-    const u = use(s.finger ? "fingerDisplay" : "display");
+    const u = use("display");
     bind(u, "photo", s.photo, 0);
     bind(u, "velocity", s.velocity.read.texture, 1);
     bind(u, "dye", s.dye.read.texture, 2);
-    if (s.finger) bind(u, "fingerDye", s.finger.dye.read.texture, 3);
     gl.uniform4fv(u.roots, s.rootArray);
     gl.uniform1i(u.rootCount, s.roots.length);
     gl.uniform1f(u.time, t);
@@ -455,7 +411,6 @@ void main(){
         const s = systems.find((x) => x.image.parentElement === entry.target);
         if (!s) continue;
         s.visible = entry.isIntersecting && entry.intersectionRatio >= 0.005;
-        if (!s.visible) clearFinger(s);
         s.last = 0;
       }
       wake();
@@ -549,81 +504,6 @@ void main(){
         0.0018,
       );
   }
-  function clearFinger(s) {
-    s.fingerPending = null;
-    const f = s.finger;
-    if (!f) return;
-    for (const buffer of [
-      f.velocity.read,
-      f.velocity.write,
-      f.dye.read,
-      f.dye.write,
-      f.pressure.read,
-      f.pressure.write,
-      f.divergence,
-      f.curl,
-      f.detail,
-    ]) {
-      gl.deleteTexture(buffer.texture);
-      gl.deleteFramebuffer(buffer.fbo);
-    }
-    s.finger = null;
-  }
-  function updateFinger(s, dt) {
-    const pending = s.fingerPending;
-    if (!s.finger && !pending) return;
-    if (!s.finger) {
-      s.finger = {
-        w: 384,
-        h: Math.round((384 * s.h) / s.w),
-        time: 0,
-        idle: 0,
-        emitIn: 0,
-        lastPoint: null,
-      };
-      allocateFluid(s.finger);
-      s.finger.detail = texture(s.finger.w, s.finger.h);
-    }
-    const f = s.finger;
-    current = f;
-    f.time += dt;
-    f.idle += dt;
-    f.emitIn -= dt;
-    const p = pending || (s.contact?.down && f.emitIn <= 0 ? s.contact : null);
-    if (p) {
-      const from = p.start ? p.origin : f.lastPoint || p;
-      const dx = p.x - from.x,
-        dy = p.y - from.y;
-      const distance = Math.hypot((dx * f.w) / f.h, dy);
-      const count = Math.max(1, Math.min(8, Math.ceil(distance / 0.01)));
-      const vx = Math.max(-90, Math.min(90, ((dx * f.w) / dt) * 0.45));
-      const vy = Math.max(-90, Math.min(90, ((dy * f.h) / dt) * 0.45)) + 3;
-      // Closely spaced, slightly separated injections form a continuous trail,
-      // not isolated circles. Existing pressure/curl stages roll it into wisps.
-      for (let j = 1; j <= count; j++) {
-        const x = from.x + (dx * j) / count,
-          y = from.y + (dy * j) / count;
-        const turn = f.time * 3.1 + j * 0.7;
-        for (const side of [-1, 1])
-          splat(
-            f,
-            x + (side * 0.006 * f.h) / f.w,
-            y + Math.sin(turn + side) * 0.005,
-            vx + side * 3.5,
-            vy + Math.sin(turn) * 2,
-            0.16 * (0.65 + 0.35 * Math.sin(turn + side)),
-            0.000022,
-          );
-      }
-      f.lastPoint = p;
-      f.idle = 0;
-      f.emitIn = 0.06;
-      s.fingerPending = null;
-    }
-    if (f.idle > 5) clearFinger(s);
-    else step(f, dt, f.time, 1.1);
-    current = s;
-  }
   for (const [i, img] of images.entries()) {
     const file =
       img.currentSrc.split("/").pop()?.split("?")[0] ||
@@ -667,8 +547,6 @@ void main(){
       pointer: null,
       prevPointer: null,
       contact: null,
-      finger: null,
-      fingerPending: null,
       needsDraw: true,
     };
     systems.push(s);
@@ -704,16 +582,7 @@ void main(){
         const down = e.type === "pointerdown" || !!s.contact?.down;
         // Hover keeps the existing directional response. A press/tap also
         // displaces steam while stationary, including on touch-only devices.
-        if (down) {
-          s.contact = { ...p, down, id: e.pointerId, age: 0 };
-          s.fingerPending = {
-            ...p,
-            start: e.type === "pointerdown" || !!s.fingerPending?.start,
-            // Retain the down point when an entire quick stroke arrives
-            // between two animation frames, including a down/move/up burst.
-            origin: e.type === "pointerdown" ? p : s.fingerPending?.origin,
-          };
-        }
+        if (down) s.contact = { ...p, down, id: e.pointerId, age: 0 };
       }
       s.prevPointer = p;
       wake();
@@ -738,7 +607,6 @@ void main(){
       // must never leave pressure held. All listeners stay passive.
       const release = (e) => {
         if (e.pointerId != null && s.contact?.id !== e.pointerId) return;
-        if (e.type !== "pointerup") s.fingerPending = null;
         s.prevPointer = null;
         if (s.contact) {
           s.contact.down = false;
@@ -802,7 +670,6 @@ void main(){
             s.pointer = null;
           }
           step(s, dt, s.time);
-          if (s.signature) updateFinger(s, dt);
           s.steps++;
         }
         render(s, s.time);
@@ -842,7 +709,6 @@ void main(){
       for (const s of systems) {
         s.last = 0;
         s.contact = s.pointer = s.prevPointer = null;
-        clearFinger(s);
       }
       if (!hidden) wake();
     },
@@ -862,7 +728,6 @@ void main(){
       s.last = 0;
       s.needsDraw = true;
       s.contact = s.pointer = s.prevPointer = null;
-      clearFinger(s);
     }
     wake();
   });

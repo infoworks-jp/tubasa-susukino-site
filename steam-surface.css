@@ -1,4 +1,8 @@
 /* One photograph coordinate space and one compositing operation for all steam. */
+.signature {
+  /* Horizontal finger trails remain interactive; vertical scroll and zoom stay native. */
+  touch-action: pan-y pinch-zoom;
+}
 .signature .fx-steam,
 .food-grid > .favorites-steam {
   display: none !important;

@@ -18,6 +18,12 @@ export async function pressureQA(
     const schedule = "if (!raf && !hidden) raf = requestAnimationFrame(tick);";
     if (!source.includes(schedule)) throw Error("QA scheduling hook missing");
     source = source.replace(schedule, "window.__pressureTick = tick;");
+    // Isolate the approved photographic pressure layer. The additive finger
+    // layer is exercised separately, with the complete production shader.
+    source = source.replace(
+      "if (s.signature) updateFinger(s, dt);",
+      "/* Finger layer isolated for the pressure regression check. */",
+    );
     source = source.replace(
       "  // Keep the readable photo fallback",
       `
@@ -26,6 +32,11 @@ export async function pressureQA(
       s.visible = i === index;
       s.last = 0; s.time = 0; s.nextEmit = 0;
       s.pointer = s.prevPointer = s.contact = null;
+      if (typeof clearFinger === 'function') clearFinger(s);
+      // Deterministic solver probes use a smaller presentation only. The
+      // normal-time main QA still checks full production-resolution pixels.
+      s.canvas.width = Math.min(480, s.image.naturalWidth);
+      s.canvas.height = Math.round(s.canvas.width*s.image.naturalHeight/s.image.naturalWidth);
       if (!s.allocated) continue;
       for (const field of [s.velocity, s.dye, s.pressure])
         for (const buffer of [field.read, field.write]) {
