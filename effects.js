@@ -461,28 +461,32 @@ void main(){
           const wind = Math.sin(phase * .19 + Math.sin(phase * .071)) *
             (tsubasa ? .62 : .85);
           srcX += Math.sin(phase * 0.68) * 0.0035;
-          for (let k = tsubasa ? -1 : -2; k <= (tsubasa ? 1 : 2); k++) {
-            const spread = tsubasa ? 0.0064 : 0.0040,
+          const mobileOffsets = tsubasa ? [-.025, .025] : [-.07, 0, .07];
+          const plumeOffsets = mobile ? mobileOffsets : Array.from(
+            { length: tsubasa ? 3 : 5 },
+            (_, i) => i - (tsubasa ? 1 : 2),
+          );
+          for (const [index, item] of plumeOffsets.entries()) {
+            const k = mobile ? index - (plumeOffsets.length - 1) / 2 : item;
+            const spread = mobile ? 1 : tsubasa ? 0.0064 : 0.0040,
               x =
                 srcX +
-                k * spread +
-                Math.sin(phase * (tsubasa ? 0.72 : 1.05) + k) * 0.0028,
+                (mobile ? item : k * spread) +
+                Math.sin(phase * (tsubasa ? 0.72 : 1.05) + k) * (mobile ? .0015 : .0028),
               y = srcY + Math.abs(k) * 0.0015;
             s.sim.splat(
               x,
-              y,
-              wind + Math.sin(phase * (tsubasa ? 0.92 : 1.37) + k * 2.1) *
-                (tsubasa ? 1.15 : 1.85),
-              ((tsubasa ? 19 : 25) + Math.cos(phase + k) * (tsubasa ? 2.5 : 3.5)) * breath,
-              (tsubasa ? (mobile ? 0.034 : 0.080) : mobile ? 0.040 : 0.122) * breath,
-              (tsubasa ? 0.00016 + k * k * 0.000009 : 0.00009 + k * k * 0.000006) *
-                (mobile ? 0.35 : 1),
+              y - (mobile ? .012 : 0),
+              mobile ? Math.sin(phase * .51 + index * 1.7) * .9 : wind + Math.sin(phase * (tsubasa ? 0.92 : 1.37) + k * 2.1) * (tsubasa ? 1.15 : 1.85),
+              mobile ? (8.5 + Math.cos(phase + index) * 1.4) * breath : ((tsubasa ? 19 : 25) + Math.cos(phase + k) * (tsubasa ? 2.5 : 3.5)) * breath,
+              mobile ? .020 * breath : (tsubasa ? .080 : .122) * breath,
+              mobile ? .000045 : (tsubasa ? 0.00016 + k * k * 0.000009 : 0.00009 + k * k * 0.000006),
             );
           }
           // A faint blanket rises from the wider noodle surface. On mobile it
           // must stay much lighter than the main plume; otherwise accumulated
           // dye turns into a detached cloud above the bowl.
-          const surfaceOffsets = mobile ? [-.11, .11] : [-.19, -.095, .095, .19];
+          const surfaceOffsets = mobile ? [] : [-.19, -.095, .095, .19];
           for (const [i, offset] of surfaceOffsets.entries()) {
             s.sim.splat(
               Math.max(.04, Math.min(.96, srcX + offset)),
@@ -494,7 +498,7 @@ void main(){
             );
           }
           const irregular = .82 + .34 * (.5 + .5 * Math.sin(phase * 1.73 + s.phase));
-          s.nextEmit = now + (tsubasa ? (mobile ? 108 : 86) : mobile ? 78 : 60) * irregular;
+          s.nextEmit = now + (mobile ? 126 : tsubasa ? 86 : 60) * irregular;
         }
         s.sim.step(dt);
         if (s.pointer) {
@@ -503,8 +507,8 @@ void main(){
             s.pointer.y,
             s.pointer.dx * 420,
             s.pointer.dy * 420,
-              mobile ? 0.08 : 0.065,
-            0.00135,
+              mobile ? 0.035 : 0.065,
+            mobile ? 0.00025 : 0.00135,
           );
           s.pointer = null;
         }

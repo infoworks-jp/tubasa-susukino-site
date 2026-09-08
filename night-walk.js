@@ -32,7 +32,7 @@
     const { Map, Marker, NavigationControl } = await import('./vendor/maplibre-gl.mjs?v=6.8.0');
     map = new Map({
       container: mapNode,
-      style: 'https://tiles.openfreemap.org/styles/dark',
+      style: 'https://tiles.openfreemap.org/styles/fiord',
       center: route[0],
       zoom: 18.2,
       pitch: 74,
