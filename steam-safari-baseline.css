@@ -1,0 +1,5 @@
+/* Versioned last-mile overrides loaded with the cross-browser steam engine. */
+.signature .fx-steam{opacity:.48!important;filter:blur(.45px)!important;mix-blend-mode:screen!important}
+.signature-tsubasa .fx-steam{opacity:.38!important}
+.favorites-steam{opacity:.54!important}
+@media(max-width:700px){.signature .fx-steam{opacity:.52!important;filter:blur(.35px)!important}.signature-tsubasa .fx-steam{opacity:.40!important}.favorites-steam{opacity:.58!important}}

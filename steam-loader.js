@@ -3,8 +3,12 @@
   if(!target)return;
   const load=()=>{
     if(document.querySelector('script[data-steam-engine]'))return;
+    const style=document.createElement('link');
+    style.rel='stylesheet';
+    style.href='steam-safari-baseline.css?v=20260908-1';
+    document.head.appendChild(style);
     const script=document.createElement('script');
-    script.src='effects.js?v=experience-20260908-1';
+    script.src='steam-canvas2d.js?v=safari-baseline-20260908-1';
     script.dataset.steamEngine='';
     document.body.appendChild(script);
   };

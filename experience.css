@@ -50,13 +50,13 @@
 /* The photographs already contain detailed steam. The solver adds only a
    restrained moving edge so it never becomes a second white smoke layer. */
 .signature .fx-steam {
-  opacity: .18 !important;
-  filter: none !important;
+  opacity: .48 !important;
+  filter: blur(.45px) !important;
   mix-blend-mode: screen !important;
   pointer-events: none !important;
 }
 
-.signature-tsubasa .fx-steam { opacity: .12 !important; }
+.signature-tsubasa .fx-steam { opacity: .38 !important; }
 
 .shop-section .steam-shop {
   display: block !important;
@@ -185,13 +185,13 @@
   .signature-tsubasa .media { object-position: 50% 50% !important; }
 
   .signature .fx-steam {
-    opacity: .14 !important;
-    filter: none !important;
+    opacity: .52 !important;
+    filter: blur(.35px) !important;
     transform: none !important;
     transform-origin: center !important;
   }
 
-  .signature-tsubasa .fx-steam { opacity: .085 !important; }
+  .signature-tsubasa .fx-steam { opacity: .40 !important; }
 
   .signature-copy,
   .signature-copy.right {
