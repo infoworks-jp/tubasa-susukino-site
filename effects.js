@@ -611,7 +611,8 @@ void main(){
             y + Math.sin(turn + side) * 0.005,
             vx + side * 3.5,
             vy + Math.sin(turn) * 2,
-            0.16 * (0.65 + 0.35 * Math.sin(turn + side)),
+            // 31% more fingertip vapor; ambient density and flow stay unchanged.
+            0.21 * (0.65 + 0.35 * Math.sin(turn + side)),
             0.000022,
           );
       }

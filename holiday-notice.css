@@ -1,0 +1,63 @@
+/* A temporary notice in the existing gap above the CM button. No hero reflow. */
+.holiday-notice {
+  position: absolute;
+  z-index: 9;
+  left: clamp(26px, 6vw, 96px);
+  bottom: 160px;
+  width: min(570px, calc(100% - 52px));
+  padding: 16px 22px;
+  background: #e5c280;
+  color: #21170b;
+  border-top: 2px solid #f7dfab;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+}
+.holiday-notice[hidden] { display: none !important; }
+.holiday-notice h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: .08em;
+}
+.holiday-notice-days {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.holiday-notice-days p { margin: 0; }
+.holiday-notice-days p + p {
+  padding-left: 22px;
+  border-left: 1px solid #a18048;
+}
+.holiday-notice time {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.holiday-notice strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+@media (max-width: 700px) {
+  .holiday-notice {
+    left: 24px;
+    right: 24px;
+    bottom: max(100px, calc(92px + env(safe-area-inset-bottom)));
+    width: auto;
+    padding: 10px 14px;
+  }
+  .holiday-notice h2 { margin-bottom: 6px; font-size: 10px; letter-spacing: .04em; }
+  .holiday-notice time { font-size: clamp(16px, 4.6vw, 20px); }
+  .holiday-notice strong { font-size: 12px; margin-top: 2px; }
+  .holiday-notice-days p + p { padding-left: 14px; }
+}
+@media (min-width: 701px) and (max-height: 600px) {
+  .holiday-notice { bottom: 120px; padding: 8px 18px; }
+  .holiday-notice h2 { margin-bottom: 5px; font-size: 11px; }
+  .holiday-notice-days p { display: flex; align-items: baseline; gap: 8px; }
+  .holiday-notice time { font-size: 18px; }
+  .holiday-notice strong { font-size: 12px; margin-top: 0; }
+}

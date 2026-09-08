@@ -184,6 +184,12 @@ jobs:
           STEAM_QA_CASES: ${{ matrix.browser-case }}
           STEAM_QA_SOFTWARE: "1"
         run: node tests/steam-qa.mjs
+      - name: Verify announcement layout and automatic JST expiration
+        if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
+        env:
+          NOTICE_QA_ENGINE: ${{ startsWith(matrix.browser-case, 'webkit') && 'webkit' || 'chromium' }}
+          NOTICE_QA_OUTPUT: output/steam-qa/holiday-notice
+        run: node tests/holiday-notice-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
