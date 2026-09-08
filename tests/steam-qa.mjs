@@ -3,6 +3,7 @@
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pressureQA } from "./steam-pressure-qa.mjs";
 const require = createRequire(
   process.env.STEAM_QA_PLAYWRIGHT || import.meta.url,
 );
@@ -329,6 +330,22 @@ for (const name of names) {
       )
     )
       fail("Horizontal page overflow");
+    result.pressure = await pressureQA(
+      context,
+      base,
+      async (pressurePage, label) => {
+        const filename = `${name}-pressure-${label}.jpg`;
+        await pressurePage.screenshot({
+          path: path.join(directory, filename),
+          type: "jpeg",
+          quality: 85,
+        });
+        result.screenshots.push(filename);
+      },
+      undefined,
+      mobile,
+    );
+    result.errors.push(...result.pressure.errors);
     // A GPU failure must keep original photographs and text readable.
     const fallback = await context.newPage();
     await fallback.addInitScript(() => {

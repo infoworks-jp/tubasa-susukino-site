@@ -455,6 +455,55 @@ void main(){
       ),
     };
   };
+  // A press on a bowl must reach its steam, not an invisible area below the
+  // display mask. Keep the approved display shader and ambient emitter intact.
+  function steamPoint(s, p) {
+    const root = s.roots.reduce((nearest, r) =>
+      Math.abs(p.x - r[0]) < Math.abs(p.x - nearest[0]) ? r : nearest,
+    );
+    return {
+      x: Math.max(
+        root[0] - root[2] * 0.7,
+        Math.min(root[0] + root[2] * 0.7, p.x),
+      ),
+      y: Math.max(
+        1 - root[1] + root[3] * 0.3,
+        Math.min(1 - root[1] + root[3] * 0.85, p.y),
+      ),
+      width: root[2],
+    };
+  }
+  function stir(s, dt) {
+    if (s.pointer) {
+      const p = s.pointer,
+        at = steamPoint(s, p);
+      // Velocity only: move the existing strands, never paint a white spot.
+      splat(s, at.x, at.y, p.dx * 1800, p.dy * 1800, 0, 0.0024);
+      s.pointer = null;
+    }
+    const contact = s.contact;
+    if (!contact) return;
+    contact.age += dt;
+    if (!contact.down && contact.age > 0.35) {
+      s.contact = null;
+      return;
+    }
+    const at = steamPoint(s, contact);
+    const strength =
+      18 * dt * 30 * (contact.down ? 1 : Math.exp(-contact.age * 12));
+    // Two small opposing forces part the plume around the fingertip. The
+    // existing pressure/advection/vorticity stages carry and dissipate them.
+    for (const side of [-1, 1])
+      splat(
+        s,
+        at.x + side * at.width * 0.3,
+        at.y,
+        side * strength,
+        strength * 0.25,
+        0,
+        0.0018,
+      );
+  }
   for (const [i, img] of images.entries()) {
     const file =
       img.currentSrc.split("/").pop()?.split("?")[0] ||
@@ -497,6 +546,7 @@ void main(){
       nextEmit: 0,
       pointer: null,
       prevPointer: null,
+      contact: null,
       needsDraw: true,
     };
     systems.push(s);
@@ -510,6 +560,8 @@ void main(){
     if (img.complete && img.naturalWidth) prepare();
     else img.addEventListener("load", prepare, { once: true });
     const move = (e) => {
+      if (e.target.closest?.("a, button, input, select, textarea")) return;
+      if (e.type === "pointerdown" && e.button !== 0) return;
       if (
         e.pointerType === "touch" &&
         e.type === "pointermove" &&
@@ -526,6 +578,12 @@ void main(){
             ? 0.025
             : Math.max(-0.08, Math.min(0.08, p.y - prev.y)),
       };
+      if (signature) {
+        const down = e.type === "pointerdown" || !!s.contact?.down;
+        // Hover keeps the existing directional response. A press/tap also
+        // displaces steam while stationary, including on touch-only devices.
+        if (down) s.contact = { ...p, down, id: e.pointerId, age: 0 };
+      }
       s.prevPointer = p;
       wake();
     };
@@ -536,9 +594,28 @@ void main(){
         name,
         () => {
           s.prevPointer = null;
+          if (s.contact) {
+            s.contact.down = false;
+            s.contact.age = 0;
+          }
         },
         { passive: true },
       );
+    if (signature) {
+      img.draggable = false;
+      // A release outside the photograph, browser blur or native touch scroll
+      // must never leave pressure held. All listeners stay passive.
+      const release = (e) => {
+        if (e.pointerId != null && s.contact?.id !== e.pointerId) return;
+        s.prevPointer = null;
+        if (s.contact) {
+          s.contact.down = false;
+          s.contact.age = 0;
+        }
+      };
+      for (const name of ["pointerup", "pointercancel", "blur"])
+        addEventListener(name, release, { passive: true });
+    }
     // Source hover transitions must be identical on the presentation canvas.
     img.parentElement.addEventListener("pointerenter", () => sync(s), {
       passive: true,
@@ -586,7 +663,8 @@ void main(){
               }
             s.nextEmit = s.time + 0.11;
           }
-          if (s.pointer) {
+          if (s.signature) stir(s, dt);
+          else if (s.pointer) {
             const p = s.pointer;
             splat(s, p.x, p.y, p.dx * 280, p.dy * 280, 0.004, 0.0014);
             s.pointer = null;
@@ -628,7 +706,10 @@ void main(){
     "visibilitychange",
     () => {
       hidden = document.hidden || !state.gpu;
-      for (const s of systems) s.last = 0;
+      for (const s of systems) {
+        s.last = 0;
+        s.contact = s.pointer = s.prevPointer = null;
+      }
       if (!hidden) wake();
     },
     { passive: true },
@@ -646,6 +727,7 @@ void main(){
     for (const s of systems) {
       s.last = 0;
       s.needsDraw = true;
+      s.contact = s.pointer = s.prevPointer = null;
     }
     wake();
   });
