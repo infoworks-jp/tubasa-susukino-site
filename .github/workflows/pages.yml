@@ -15,7 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  steam-qa:
+    uses: ./.github/workflows/visual-qa.yml
   deploy:
+    needs: steam-qa
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -33,7 +36,7 @@ jobs:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: "."
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4

@@ -1,0 +1,321 @@
+// Actual rendered pixels, not just animation counters. Run against a preview
+// or the exact deployed URL. No screenshots/versions from another repository.
+import { createRequire } from "node:module";
+import fs from "node:fs/promises";
+import path from "node:path";
+const require = createRequire(
+  process.env.STEAM_QA_PLAYWRIGHT || import.meta.url,
+);
+const { chromium, webkit } = require("playwright");
+const base = process.env.STEAM_QA_URL || "http://127.0.0.1:4174/";
+const directory = process.env.STEAM_QA_OUTPUT || "output/steam-qa";
+const names = (
+  process.env.STEAM_QA_CASES ||
+  "chromium-desktop,chromium-mobile,webkit-375,webkit-390,webkit-430"
+).split(",");
+await fs.mkdir(directory, { recursive: true });
+const results = {
+  url: base,
+  date: new Date().toISOString(),
+  note: "Mobile layouts are emulation, not a physical iPhone.",
+  cases: [],
+};
+const selectors = [
+  ".signature-miso",
+  ".signature-butter-corn",
+  ".signature-tsubasa",
+];
+
+async function startSample(page) {
+  await page.evaluate(() => {
+    window.__steamSample = window.__tsubasaEffects.surfaces
+      .filter((s) => s.visible && s.ready)
+      .map((s) => ({
+        s,
+        draws: s.draws,
+        data: s.ctx.getImageData(0, 0, s.canvas.width, s.canvas.height).data,
+      }));
+  });
+}
+async function endSample(page) {
+  return page.evaluate(() =>
+    window.__steamSample.map(({ s, data, draws }) => {
+      const { width: w, height: h } = s.canvas;
+      const next = s.ctx.getImageData(0, 0, w, h).data;
+      let steam = 0,
+        bowl = 0;
+      const roots = s.roots.map(() => 0);
+      for (let i = 0; i < data.length; i += 4) {
+        if (
+          Math.max(
+            Math.abs(next[i] - data[i]),
+            Math.abs(next[i + 1] - data[i + 1]),
+            Math.abs(next[i + 2] - data[i + 2]),
+          ) <= 6
+        )
+          continue;
+        const x = ((i / 4) % w) / w,
+          y = Math.floor(i / 4 / w) / h;
+        if (y > 0.55) bowl++;
+        else steam++;
+        s.roots.forEach((r, j) => {
+          if (y < r[1] - 0.03 && Math.abs(x - r[0]) < r[2]) roots[j]++;
+        });
+      }
+      const a = s.image.getBoundingClientRect(),
+        b = s.canvas.getBoundingClientRect();
+      return {
+        profile: s.profile,
+        steam,
+        bowl,
+        roots,
+        frames: s.draws - draws,
+        alignmentError: Math.max(
+          ...["x", "y", "width", "height"].map((k) => Math.abs(a[k] - b[k])),
+        ),
+      };
+    }),
+  );
+}
+async function scrollTo(page, selector) {
+  await page.locator(selector).evaluate((el) => {
+    const y = el.getBoundingClientRect().top + scrollY;
+    scrollTo({ top: y - 55, behavior: "instant" });
+  });
+  await page.waitForTimeout(700);
+}
+
+for (const name of names) {
+  const isWebkit = name.startsWith("webkit");
+  const mobile = name !== "chromium-desktop" && name !== "brave-desktop";
+  const width = mobile ? Number(name.split("-")[1]) || 390 : 1440;
+  const browser = await (isWebkit ? webkit : chromium).launch({
+    headless: process.env.STEAM_QA_HEADED !== "1",
+    ...(name.startsWith("chromium") && process.env.STEAM_QA_CHROME === "1"
+      ? { channel: "chrome" }
+      : {}),
+    ...(name.startsWith("brave")
+      ? {
+          executablePath:
+            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+        }
+      : {}),
+    ...(!isWebkit && process.env.STEAM_QA_SOFTWARE === "1"
+      ? {
+          args: [
+            "--enable-webgl",
+            "--use-angle=swiftshader",
+            "--enable-unsafe-swiftshader",
+          ],
+        }
+      : {}),
+  });
+  const context = await browser.newContext({
+    viewport: { width, height: mobile ? 844 : 1000 },
+    isMobile: mobile,
+    hasTouch: mobile,
+    deviceScaleFactor: 1,
+  });
+  const page = await context.newPage();
+  const result = {
+    name,
+    viewport: { width, height: mobile ? 844 : 1000 },
+    errors: [],
+    samples: [],
+    screenshots: [],
+  };
+  const fail = (message) => result.errors.push(message);
+  page.on("pageerror", (e) => fail(e.message));
+  page.on("response", (r) => {
+    if (r.status() >= 400 && new URL(r.url()).origin === new URL(base).origin)
+      fail(`HTTP ${r.status()} ${r.url()}`);
+  });
+  const shot = async (label) => {
+    const filename = `${name}-${label}.jpg`;
+    await page.screenshot({
+      path: path.join(directory, filename),
+      type: "jpeg",
+      quality: 85,
+    });
+    result.screenshots.push(filename);
+  };
+  try {
+    console.log(`${name}: opening ${base}`);
+    await page.goto(base, { waitUntil: "load" });
+    await page.waitForFunction(
+      () => window.__tsubasaEffects?.surfaces.length === 11,
+      { timeout: 20000 },
+    );
+    result.engine = await page.evaluate(() =>
+      window.__tsubasaEffects.inspect(),
+    );
+    if (!result.engine.gpu || result.engine.contextCount !== 1)
+      fail("Single GPU steam context unavailable");
+    const targets = [
+      ...selectors,
+      ...Array.from(
+        { length: mobile ? 8 : 2 },
+        (_, i) => `.food-card:nth-child(${mobile ? i + 1 : i * 4 + 1})`,
+      ),
+    ];
+    for (const [i, selector] of targets.entries()) {
+      await scrollTo(page, selector);
+      await page.waitForFunction(
+        (selector) => {
+          const target = document.querySelector(selector);
+          return window.__tsubasaEffects.surfaces.some(
+            (s) => target.contains(s.image) && s.visible && s.ready,
+          );
+        },
+        selector,
+        { timeout: 15000 },
+      );
+      await startSample(page);
+      await shot(`${i}-t0`);
+      await page.waitForTimeout(1300);
+      const pixels = await endSample(page);
+      if (!pixels.length) fail(`No rendered steam at ${selector}`);
+      for (const p of pixels) {
+        if (p.frames < 2 || p.steam < 30 || p.roots.some((n) => n < 10))
+          fail(`Steam stopped or missing root: ${JSON.stringify(p)}`);
+        if (p.bowl !== 0) fail(`Bowl was distorted: ${JSON.stringify(p)}`);
+        if (p.alignmentError > 1)
+          fail(`Photo/canvas misalignment: ${JSON.stringify(p)}`);
+      }
+      result.samples.push({ selector, pixels });
+      await shot(`${i}-t1`);
+    }
+    const allProfiles = new Set(
+      result.samples.flatMap((s) => s.pixels.map((p) => p.profile)),
+    );
+    if (allProfiles.size !== 11)
+      fail(`Only ${allProfiles.size}/11 photographs tested`);
+    await scrollTo(page, ".signature-miso");
+    result.pointer = await page.locator(".signature-miso").evaluate((el) => {
+      const s = window.__tsubasaEffects.surfaces[0],
+        r = el.getBoundingClientRect();
+      el.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          pointerType: "touch",
+          clientX: r.left + r.width * 0.55,
+          clientY: r.top + r.height * 0.3,
+          bubbles: true,
+        }),
+      );
+      el.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerType: "touch",
+          clientX: r.left + r.width * 0.63,
+          clientY: r.top + r.height * 0.25,
+          bubbles: true,
+        }),
+      );
+      const accepted =
+        !!s.pointer && (s.pointer.dx !== 0 || s.pointer.dy !== 0);
+      el.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+      return { accepted, released: s.prevPointer === null };
+    });
+    if (!result.pointer.accepted || !result.pointer.released)
+      fail("Pointer input/release failed");
+    await page.waitForTimeout(500);
+    await shot("pointer");
+    result.frameTiming = await page.evaluate(async () => {
+      const samples = [];
+      let prev = performance.now();
+      for (let i = 0; i < 120; i++)
+        await new Promise((resolve) =>
+          requestAnimationFrame((t) => {
+            samples.push(t - prev);
+            prev = t;
+            resolve();
+          }),
+        );
+      samples.sort((a, b) => a - b);
+      return {
+        average: samples.reduce((a, b) => a + b, 0) / samples.length,
+        p95: samples[Math.floor(samples.length * 0.95)],
+        over50ms: samples.filter((x) => x > 50).length,
+      };
+    });
+    const beforeAway = await page.evaluate(
+      () => window.__tsubasaEffects.surfaces[0].draws,
+    );
+    await scrollTo(page, "#access");
+    await page.waitForTimeout(600);
+    const stopped = await page.evaluate(
+      () => window.__tsubasaEffects.surfaces[0].draws,
+    );
+    await page.waitForTimeout(600);
+    if (
+      stopped !==
+      (await page.evaluate(() => window.__tsubasaEffects.surfaces[0].draws))
+    )
+      fail("Offscreen steam kept rendering");
+    await scrollTo(page, ".signature-miso");
+    if (
+      beforeAway >=
+      (await page.evaluate(() => window.__tsubasaEffects.surfaces[0].draws))
+    )
+      fail("Steam did not resume after scrolling");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.waitForTimeout(400);
+    await startSample(page);
+    await page.waitForTimeout(500);
+    result.reducedMotion = await endSample(page);
+    if (result.reducedMotion.some((p) => p.frames || p.steam || p.bowl))
+      fail("Reduced motion was ignored");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.waitForTimeout(400);
+    await startSample(page);
+    await page.waitForTimeout(800);
+    if (!(await endSample(page)).some((p) => p.steam > 30))
+      fail("Motion did not restart");
+    result.finalState = await page.evaluate(() =>
+      window.__tsubasaEffects.inspect(),
+    );
+    result.errors.push(...result.finalState.errors);
+    if (
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth + 1,
+      )
+    )
+      fail("Horizontal page overflow");
+    // A GPU failure must keep original photographs and text readable.
+    const fallback = await context.newPage();
+    await fallback.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        return /webgl/.test(type) ? null : original.call(this, type, ...args);
+      };
+    });
+    await fallback.goto(base, { waitUntil: "domcontentloaded" });
+    await scrollTo(fallback, ".signature-miso");
+    result.fallback = await fallback
+      .locator(".signature-miso img")
+      .evaluate((img) => ({
+        loaded: img.complete && img.naturalWidth > 0,
+        opacity: getComputedStyle(img).opacity,
+      }));
+    if (!result.fallback.loaded || result.fallback.opacity === "0")
+      fail("GPU fallback hid the photograph");
+    await fallback.close();
+  } catch (e) {
+    fail(String(e.stack || e));
+  }
+  result.passed = result.errors.length === 0;
+  results.cases.push(result);
+  console.log(
+    `${name}: ${result.passed ? "PASS" : "FAIL"} ${JSON.stringify(result.errors)} timing=${JSON.stringify(result.frameTiming)}`,
+  );
+  await browser.close();
+  await fs.writeFile(
+    path.join(directory, "report.json"),
+    JSON.stringify(results, null, 2),
+  );
+}
+results.passed = results.cases.every((r) => r.passed);
+await fs.writeFile(
+  path.join(directory, "report.json"),
+  JSON.stringify(results, null, 2),
+);
+if (!results.passed) process.exitCode = 1;
