@@ -152,10 +152,21 @@ jobs:
           retention-days: 90
 
   browser:
-    name: 3. This commit / all steam roots / Chromium + WebKit
+    name: 3. This commit / ${{ matrix.browser-case }}
     needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser-case:
+          [
+            chromium-desktop,
+            chromium-mobile,
+            webkit-375,
+            webkit-390,
+            webkit-430,
+          ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -170,13 +181,13 @@ jobs:
       - name: Compare rendered pixels and exercise lifecycle
         env:
           STEAM_QA_URL: http://127.0.0.1:4174/
-          STEAM_QA_CASES: chromium-desktop,chromium-mobile,webkit-375,webkit-390,webkit-430
+          STEAM_QA_CASES: ${{ matrix.browser-case }}
           STEAM_QA_SOFTWARE: "1"
         run: node tests/steam-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: steam-rendered-pixels-${{ github.sha }}
+          name: steam-rendered-pixels-${{ github.sha }}-${{ matrix.browser-case }}
           path: output/steam-qa
           retention-days: 30
 

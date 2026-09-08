@@ -33,13 +33,14 @@ async function startSample(page) {
       .map((s) => ({
         s,
         draws: s.draws,
+        steps: s.steps,
         data: s.ctx.getImageData(0, 0, s.canvas.width, s.canvas.height).data,
       }));
   });
 }
 async function endSample(page) {
   return page.evaluate(() =>
-    window.__steamSample.map(({ s, data, draws }) => {
+    window.__steamSample.map(({ s, data, draws, steps }) => {
       const { width: w, height: h } = s.canvas;
       const next = s.ctx.getImageData(0, 0, w, h).data;
       let steam = 0,
@@ -70,6 +71,7 @@ async function endSample(page) {
         bowl,
         roots,
         frames: s.draws - draws,
+        steps: s.steps - steps,
         alignmentError: Math.max(
           ...["x", "y", "width", "height"].map((k) => Math.abs(a[k] - b[k])),
         ),
@@ -270,16 +272,51 @@ for (const name of names) {
     )
       fail("Steam did not resume after scrolling");
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.waitForTimeout(400);
-    await startSample(page);
-    await page.waitForTimeout(500);
-    result.reducedMotion = await endSample(page);
-    if (result.reducedMotion.some((p) => p.frames || p.steam || p.bowl))
-      fail("Reduced motion was ignored");
+    // A media change may render the unwarped photo once. It must never run
+    // another simulation step, and then must reach two unchanged samples.
+    // Do not confuse this final static paint with continued animation, or
+    // rely on a change-event diagnostic that can lag the effective query.
+    result.reducedMotion = [];
+    const reducedDraws = new Map();
+    let quietSamples = 0;
+    for (let attempt = 0; attempt < 6 && quietSamples < 2; attempt++) {
+      await startSample(page);
+      await page.waitForTimeout(500);
+      const sample = await endSample(page);
+      result.reducedMotion.push(...sample);
+      if (!sample.length) {
+        fail("Reduced-motion photograph missing");
+        break;
+      }
+      for (const p of sample) {
+        reducedDraws.set(
+          p.profile,
+          (reducedDraws.get(p.profile) || 0) + p.frames,
+        );
+        if (p.steps || reducedDraws.get(p.profile) > 1)
+          fail("Reduced motion kept simulating or rendering");
+      }
+      quietSamples = sample.every((p) => !p.frames && !p.steam && !p.bowl)
+        ? quietSamples + 1
+        : 0;
+    }
+    if (quietSamples < 2) fail("Reduced-motion pixels did not settle");
+    const resumeSteps = await page.evaluate(() =>
+      Object.fromEntries(
+        window.__tsubasaEffects.surfaces.map((s) => [s.profile, s.steps]),
+      ),
+    );
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.waitForTimeout(400);
+    await page.waitForFunction(
+      (before) =>
+        window.__tsubasaEffects.surfaces.some(
+          (s) => s.visible && s.steps > before[s.profile],
+        ),
+      resumeSteps,
+      { timeout: 15000 },
+    );
     await startSample(page);
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(1500);
     if (!(await endSample(page)).some((p) => p.steam > 30))
       fail("Motion did not restart");
     result.finalState = await page.evaluate(() =>
