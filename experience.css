@@ -34,29 +34,9 @@
   background-position: center !important;
 }
 
-.signature .media,
-.signature .fx-steam {
-  transform: none !important;
-}
-
 .signature .media {
   filter: brightness(.72) contrast(1.08) saturate(1.03) !important;
 }
-
-.signature-miso .media { object-position: 58% 50% !important; }
-.signature-butter-corn .media { object-position: 50% 50% !important; }
-.signature-tsubasa .media { object-position: 50% 50% !important; }
-
-/* The photographs already contain detailed steam. The solver adds only a
-   restrained moving edge so it never becomes a second white smoke layer. */
-.signature .fx-steam {
-  opacity: .48 !important;
-  filter: blur(.45px) !important;
-  mix-blend-mode: screen !important;
-  pointer-events: none !important;
-}
-
-.signature-tsubasa .fx-steam { opacity: .38 !important; }
 
 .shop-section .steam-shop {
   display: block !important;
@@ -180,19 +160,6 @@
   }
 
   .signature { min-height: 100vh; min-height: 100svh; }
-  .signature-miso .media { object-position: 69% 50% !important; }
-  .signature-butter-corn .media { object-position: 50% 50% !important; }
-  .signature-tsubasa .media { object-position: 50% 50% !important; }
-
-  .signature .fx-steam {
-    opacity: .52 !important;
-    filter: blur(.35px) !important;
-    transform: none !important;
-    transform-origin: center !important;
-  }
-
-  .signature-tsubasa .fx-steam { opacity: .40 !important; }
-
   .signature-copy,
   .signature-copy.right {
     bottom: max(5svh, env(safe-area-inset-bottom, 0px));
