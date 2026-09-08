@@ -253,9 +253,6 @@ for (const name of names) {
           }, 2000);
         }),
     );
-    const beforeAway = await page.evaluate(
-      () => window.__tsubasaEffects.surfaces[0].draws,
-    );
     await scrollTo(page, "#access");
     await page.waitForTimeout(600);
     const stopped = await page.evaluate(
@@ -268,12 +265,26 @@ for (const name of names) {
     )
       fail("Offscreen steam kept rendering");
     await scrollTo(page, ".signature-miso");
-    if (
-      beforeAway >=
-      (await page.evaluate(() => window.__tsubasaEffects.surfaces[0].draws))
-    )
-      fail("Steam did not resume after scrolling");
+    // A draw made while leaving the section is not proof that it resumed.
+    // Slow software-GPU runners can still have a pending intersection update
+    // after scrollTo's fixed delay. Require a new, visible draw after stopping.
+    await page.waitForFunction(
+      (draws) => {
+        const s = window.__tsubasaEffects.surfaces[0];
+        return s.visible && s.ready && s.draws > draws;
+      },
+      stopped,
+      { timeout: 15000 },
+    );
     await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.waitForFunction(() => {
+      const s = window.__tsubasaEffects.surfaces[0];
+      return (
+        matchMedia("(prefers-reduced-motion: reduce)").matches &&
+        s.visible &&
+        s.ready
+      );
+    });
     // A media change may render the unwarped photo once. It must never run
     // another simulation step, and then must reach two unchanged samples.
     // Do not confuse this final static paint with continued animation, or

@@ -58,3 +58,9 @@ An earlier measurement taken concurrently with accelerated WebKit GPU regression
 This is the pre-publication record. The existing release workflow must pass its source contract, unmodified Pavel reference baseline and all five CI browser cases before deployment. After deployment, compare public HTML/JS/CSS bytes with this checkout and re-run browser checks on the public URL. A commit or green local tests alone are not a publication claim.
 
 Physical iPhone/Android hardware is not attached; phone verification here is browser/device emulation, explicitly not real-device sign-off.
+
+## CI synchronization correction
+
+The first release attempt (`34259083820`) was correctly blocked: Chrome desktop's reduced-motion sample was empty. Its other assertions, including all new finger checks and approved-source comparisons, passed. The software-rendered runner had approximately 400 ms rAF p95.
+
+The old resume test compared against a draw count captured **before leaving** the section. A late departing draw could satisfy it before the section became visible again, after which `startSample` captured an empty visible-surface list. The test now requires the target to be visible, ready, and newly drawn **after the offscreen stopped count**, and confirms the media query/visible target before sampling. All existing zero-simulation, at-most-one-static-paint and two-quiet-sample assertions remain. No production shader, parameters, images or CSS were changed for this correction.
