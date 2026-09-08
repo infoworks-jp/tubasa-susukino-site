@@ -55,4 +55,6 @@ Lighthouse 13・ローカルのスマホ条件で Accessibility / Best Practices
 公開後は `STEAM_QA_URL=https://www.tubasa-susukino.com/ node tests/steam-qa.mjs` で同じ検査を実行する。
 結果は `output/steam-qa/report.json` と商品ごとのt0/t1画像に保存。GitHub Actionsでも同じ検査とPavel原本のREFERENCE BASELINEを実行し、成果物を保存する。
 
+CIのソフトウェアGPUでは1フレームに数秒かかるため、速度の観測窓を2秒に制限。120フレームを待って検査が長時間止まる問題を修正した。CIでの速度は実端末性能と見なさず、描画結果の検査に使用する。
+
 公開完了はこの文書やcommitの存在で判断せず、Deploy Pages成功・公開ファイルのハッシュ一致・公開画面での動作確認を別途必要とする。

@@ -219,24 +219,36 @@ for (const name of names) {
       fail("Pointer input/release failed");
     await page.waitForTimeout(500);
     await shot("pointer");
-    result.frameTiming = await page.evaluate(async () => {
-      const samples = [];
-      let prev = performance.now();
-      for (let i = 0; i < 120; i++)
-        await new Promise((resolve) =>
-          requestAnimationFrame((t) => {
-            samples.push(t - prev);
-            prev = t;
-            resolve();
-          }),
-        );
-      samples.sort((a, b) => a - b);
-      return {
-        average: samples.reduce((a, b) => a + b, 0) / samples.length,
-        p95: samples[Math.floor(samples.length * 0.95)],
-        over50ms: samples.filter((x) => x > 50).length,
-      };
-    });
+    // Software GPU runners can take seconds per frame. Observe a bounded
+    // wall-clock interval; waiting for 120 frames could take many minutes.
+    result.frameTiming = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const samples = [];
+          const started = performance.now();
+          let previous = started,
+            raf = 0;
+          function sample(t) {
+            samples.push(t - previous);
+            previous = t;
+            raf = requestAnimationFrame(sample);
+          }
+          raf = requestAnimationFrame(sample);
+          setTimeout(() => {
+            cancelAnimationFrame(raf);
+            samples.sort((a, b) => a - b);
+            resolve({
+              duration: performance.now() - started,
+              sampleCount: samples.length,
+              average: samples.length
+                ? samples.reduce((a, b) => a + b, 0) / samples.length
+                : null,
+              p95: samples[Math.floor(samples.length * 0.95)] ?? null,
+              over50ms: samples.filter((x) => x > 50).length,
+            });
+          }, 2000);
+        }),
+    );
     const beforeAway = await page.evaluate(
       () => window.__tsubasaEffects.surfaces[0].draws,
     );
