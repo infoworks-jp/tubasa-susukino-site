@@ -18,6 +18,11 @@ export async function pressureQA(
     const schedule = "if (!raf && !hidden) raf = requestAnimationFrame(tick);";
     if (!source.includes(schedule)) throw Error("QA scheduling hook missing");
     source = source.replace(schedule, "window.__pressureTick = tick;");
+    // These probes own time, visibility and presentation resolution. A native
+    // resize/hover sync must not undo the 480px reset between two samples.
+    const size = "const width = s.signature\n      ? img.naturalWidth\n      : Math.min(660, img.naturalWidth);";
+    if (!source.includes(size)) throw Error("QA presentation size hook missing");
+    source = source.replace(size, "const width = Math.min(480, img.naturalWidth);");
     // Isolate the approved photographic pressure layer. The additive finger
     // layer is exercised separately, with the complete production shader.
     source = source.replace(
@@ -28,6 +33,10 @@ export async function pressureQA(
       "  // Keep the readable photo fallback",
       `
   window.__pressureReset = (index) => {
+    // The normal-time main QA exercises real observers. Here a late observer
+    // notification would reset s.last halfway through the deterministic clock.
+    observer.disconnect();
+    resizeObserver.disconnect();
     for (const [i,s] of systems.entries()) {
       s.visible = i === index;
       s.last = 0; s.time = 0; s.nextEmit = 0;
@@ -114,12 +123,13 @@ export async function pressureQA(
         page.evaluate(
           ({ index, phase }) => {
             const s = __tsubasaEffects.surfaces[index];
-            window.__pressureControls[phase] = s.ctx.getImageData(
+            window.__pressureControls[phase] = { width:s.canvas.width,
+              height:s.canvas.height, time:s.time, data:s.ctx.getImageData(
               0,
               0,
               s.canvas.width,
               s.canvas.height,
-            ).data;
+            ).data };
           },
           { index, phase },
         );
@@ -140,7 +150,10 @@ export async function pressureQA(
               root = s.roots[rootIndex];
             const w = s.canvas.width,
               h = s.canvas.height;
-            const a = window.__pressureControls[phase],
+            const control = window.__pressureControls[phase];
+            if (control.width !== w || control.height !== h || control.time !== s.time)
+              throw Error(`Unmatched pressure probe state: ${JSON.stringify({control:{width:control.width,height:control.height,time:control.time}, actual:{width:w,height:h,time:s.time}})}`);
+            const a = control.data,
               b = s.ctx.getImageData(0, 0, w, h).data;
             let changed = 0,
               roi = 0,
@@ -166,6 +179,7 @@ export async function pressureQA(
             return {
               profile: s.profile,
               rootIndex,
+              width:w, height:h, simulationTime:s.time,
               changed,
               roi,
               fraction: changed / roi,

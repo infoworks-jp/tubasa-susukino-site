@@ -35,3 +35,11 @@ Expire at **2026-09-25 00:00:00 Asia/Tokyo**, exactly after the entire substitut
 - Lighthouse 13.4.1 live localhost audit: Accessibility 100, Best Practices 100, SEO 100; zero failed scored audits. Performance/field CWV are not represented by these scores.
 - Native Brave local preview inspected: notice readable, normal steam visibly moves between captures, pointer input exercised. Browser settings were not changed.
 - Public verification follows deployment; do not treat this receipt as evidence of publication.
+
+## CI probe isolation repair (no production changes)
+
+Run 34292961840 caught a WebKit-430 approved-image mismatch on the first root. The deterministic probe manually set 480px output, but native observer/hover callbacks could call the production sizing path and reset the clock after that reset. Its captured ROI changed from 18,250 to 39,876 pixels within the miso case (other tap cases also changed dimensions). These were not equivalent comparison conditions.
+
+The pressure probe now owns presentation dimensions as well as its already-manual clock/visibility; native observers are disconnected only in the injected deterministic probe. Main normal-time lifecycle tests remain unchanged. Both images must have identical width, height and simulation time before pixel comparison; equality thresholds are not relaxed. Production effects.js, photos, styles and notice remain exactly those from ebec291.
+
+Local WebKit-430 passes after this repair. An independent negative-control run intentionally changed ambient injection from 0.019 to 0.03 in the test-only approved source: all four roots were still detected as mismatches, at exactly 480×320 and simulation time 1.433333333333334. Evidence: output/september-pressure-negative.json. No mutated source is deployed.
