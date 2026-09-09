@@ -1,5 +1,6 @@
 // Real pointer/touch input, deterministic time, full production fluid/shader.
 // Test-only hooks expose density and isolate composite pixels; none are shipped.
+import {quickSwipe} from './native-touch-input.mjs';
 export async function fingerQA(
   context,
   base,
@@ -288,13 +289,8 @@ export async function fingerQA(
         errors.push(
           `Horizontal touch gesture cancelled: ${JSON.stringify(horizontal)}`,
         );
-      // Let the browser schedule one quick native swipe. Awaiting individual
-      // CDP events on a software GPU can unintentionally hold >200ms before
-      // the first move, testing a long press instead of a scrolling gesture.
-      await cdp.send("Input.synthesizeScrollGesture", {
-        x: p.x, y: p.y + 150, yDistance: -128,
-        speed: 800, preventFling: true, gestureSourceType: "touch",
-      });
+      // Use the same native input sequence validated against plain tall HTML.
+      await quickSwipe(cdp, {x: p.x, y: p.y + 150});
       await page.waitForTimeout(150);
       const vertical = await page.evaluate(() => ({
         held: !!__tsubasaEffects.surfaces[0].contact?.down,

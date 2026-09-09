@@ -809,7 +809,7 @@ void main(){
         if (motion.matches || !state.gpu || e.touches.length !== 1 ||
             e.target.closest?.("a,button,input,select,textarea")) return;
         const t = e.touches[0];
-        touch = { id:t.identifier, x:t.clientX, y:t.clientY, scrolling:false, held:false };
+        touch = { id:t.identifier, x:t.clientX, y:t.clientY, started:e.timeStamp, scrolling:false, held:false };
         s.phoneGesture.phase = "pending";
         holdTimer = setTimeout(() => {
           if (!touch || touch.scrolling || document.hidden || !state.gpu) return;
@@ -823,6 +823,17 @@ void main(){
         if (e.touches.length !== 1) { resetTouch(); return; }
         const t = [...e.touches].find(t => t.identifier === touch.id);
         if (!t) { resetTouch(); return; }
+        // Use when the finger moved, not when a busy renderer delivered it.
+        // A quick swipe queued before the hold threshold must remain a scroll,
+        // even if the hold timer happened to run before this event was handled.
+        if (Math.hypot(t.clientX-touch.x,t.clientY-touch.y) > 7 &&
+            e.timeStamp-touch.started < state.gestureHoldMs) {
+          clearTimeout(holdTimer);
+          touch.held = false; touch.scrolling = true;
+          if (s.phoneGesture.phase !== "scrolling") s.phoneGesture.scrolls++;
+          s.phoneGesture.phase = "scrolling";
+          host.classList.remove("phone-steam-held");
+        }
         if (touch.held && e.cancelable) {
           // Cancel only an intentional held gesture. Never change touch-action
           // mid-gesture, and never prevent a normal quick page swipe.
