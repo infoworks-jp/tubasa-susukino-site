@@ -804,6 +804,21 @@ void main(){
         host.classList.remove("phone-steam-held");
       };
       s.resetPhoneTouch = resetTouch;
+      const releaseEarlySwipe = (e, x, y) => {
+        if (!touch || Math.hypot(x-touch.x,y-touch.y) <= 7 ||
+            e.timeStamp-touch.started >= state.gestureHoldMs) return false;
+        clearTimeout(holdTimer); touch.scrolling = true; touch.held = false;
+        host.classList.remove("phone-steam-held");
+        if (s.phoneGesture.phase !== "scrolling") s.phoneGesture.scrolls++;
+        s.phoneGesture.phase = "scrolling";
+        return true;
+      };
+      // Chromium can regenerate a TouchEvent's timestamp on delayed delivery.
+      // Its earlier PointerEvent retains the input timestamp; release the gate
+      // in capture phase before the matching touchmove can prevent scrolling.
+      host.addEventListener("pointermove", e => {
+        if (e.pointerType === "touch") releaseEarlySwipe(e, e.clientX, e.clientY);
+      }, { capture:true, passive:true });
       host.addEventListener("touchstart", e => {
         resetTouch();
         if (motion.matches || !state.gpu || e.touches.length !== 1 ||
@@ -826,14 +841,7 @@ void main(){
         // A busy renderer can deliver a quick move after the hold timer fired.
         // Use the input's original timestamp, not delivery time, so that swipe
         // still scrolls. A genuine move after a stationary hold remains held.
-        if (Math.hypot(t.clientX-touch.x,t.clientY-touch.y) > 7 &&
-            e.timeStamp-touch.started < state.gestureHoldMs) {
-          clearTimeout(holdTimer); touch.scrolling = true; touch.held = false;
-          host.classList.remove("phone-steam-held");
-          if (s.phoneGesture.phase !== "scrolling") s.phoneGesture.scrolls++;
-          s.phoneGesture.phase = "scrolling";
-          return;
-        }
+        if (releaseEarlySwipe(e, t.clientX, t.clientY)) return;
         if (touch.held && e.cancelable) {
           // Cancel only an intentional held gesture. Never change touch-action
           // mid-gesture, and never prevent a normal quick page swipe.
