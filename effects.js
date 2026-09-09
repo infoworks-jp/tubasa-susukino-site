@@ -796,10 +796,10 @@ void main(){
       host.append(hint);
       s.hint = hint;
       sync(s);
-      let holdTimer = 0, touch = null;
+      let holdTimer = 0, holdFrame = 0, touch = null;
       s.phoneGesture = { phase:"idle", holds:0, moves:0, scrolls:0 };
       const resetTouch = () => {
-        clearTimeout(holdTimer); touch = null;
+        clearTimeout(holdTimer); cancelAnimationFrame(holdFrame); touch = null;
         s.phoneGesture.phase = "idle";
         host.classList.remove("phone-steam-held");
       };
@@ -826,11 +826,19 @@ void main(){
         const t = e.touches[0];
         touch = { id:t.identifier, x:t.clientX, y:t.clientY, started:e.timeStamp, scrolling:false, held:false };
         s.phoneGesture.phase = "pending";
+        const heldTouch = touch;
         holdTimer = setTimeout(() => {
-          if (!touch || touch.scrolling || document.hidden || !state.gpu) return;
-          touch.held = true;
-          s.phoneGesture.phase = "held"; s.phoneGesture.holds++;
-          host.classList.add("phone-steam-held");
+          // Give queued native input two presentation opportunities before
+          // claiming the gesture. Under severe rendering lag, scrolling wins
+          // instead of a wall-clock timer stealing an already-moving swipe.
+          holdFrame = requestAnimationFrame(() => {
+            holdFrame = requestAnimationFrame(() => {
+              if (touch !== heldTouch || touch.scrolling || document.hidden || !state.gpu) return;
+              touch.held = true;
+              s.phoneGesture.phase = "held"; s.phoneGesture.holds++;
+              host.classList.add("phone-steam-held");
+            });
+          });
         }, state.gestureHoldMs);
       }, { passive:true });
       host.addEventListener("touchmove", e => {
