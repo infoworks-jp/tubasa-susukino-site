@@ -34,8 +34,16 @@ for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webk
      pt=await point();const direction=pt.x>config.w/2?-1:1;
      await f.evaluate(()=>{__touchEvents=[];});const y0=await f.evaluate(()=>scrollY);
      const points=(x,y)=>[{x,y,id:1,radiusX:5,radiusY:5,force:.6}];
+     if(kind==='quick-vertical'){
+      // Browser-scheduled swipe avoids adding a false long hold while waiting
+      // for slow software-GPU CDP round trips between individual move events.
+      await cd.send('Input.synthesizeScrollGesture',{x:pt.x,y:pt.y,yDistance:-96,speed:800,preventFling:true,gestureSourceType:'touch'});
+      const result=await f.evaluate(i=>({scroll:scrollY,phase:__tsubasaEffects.surfaces[i].phoneGesture.phase,held:!!__tsubasaEffects.surfaces[i].contact?.down,events:__touchEvents}),index);
+      result.scroll-=y0;assert(result.scroll>20,'Quick swipe must scroll');assert(!result.held);assert(result.events.some(e=>e.type==='pointercancel'));
+      bowl.gestures.push({kind,scroll:result.scroll,cancel:true,phase:result.phase});continue;
+     }
      await cd.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points(pt.x,pt.y)});
-     if(kind.startsWith('held'))await p.waitForTimeout(320);
+     await f.waitForFunction(i=>__tsubasaEffects.surfaces[i].phoneGesture.phase==='held',index,{timeout:5000});
      for(let j=1;j<=8;j++){const dx=kind.includes('vertical')?0:direction*j*8,dy=kind.includes('horizontal')?0:-j*9;await cd.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(pt.x+dx,pt.y+dy)});await p.waitForTimeout(32);}
      const result=await f.evaluate(i=>({scroll:scrollY,phase:__tsubasaEffects.surfaces[i].phoneGesture.phase,contact:__tsubasaEffects.surfaces[i].contact,finger:!!__tsubasaEffects.surfaces[i].finger,events:__touchEvents}),index);result.scroll-=y0;
      if(kind.startsWith('held')){assert(Math.abs(result.scroll)<2,`${kind}: must not scroll`);assert(!result.events.some(e=>e.type==='pointercancel'));assert(result.contact?.down&&result.finger);assert.equal(result.phase,'held');}

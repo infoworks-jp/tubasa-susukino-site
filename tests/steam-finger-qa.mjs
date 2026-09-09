@@ -174,10 +174,11 @@ export async function fingerQA(
       // Approved dynamic vapor has a 6.5-second lifetime; check full disposal.
       // all four roots above still exercise origin, hold, drag and momentum.
       if (index === 2 && rootIndex === 1) {
-        await run(25);
+        await run(80);
         fade = await page.evaluate((i) => __fingerRead(i), index);
-        // Density area can grow as wisps unfold. Peak density must lose at
-        // least 65% in 1.4 seconds; total density must also decrease.
+        // The approved dynamic plume unfolds over a wider area: at 1.4s its
+        // peak has faded but the advected area can still grow. At 3.6s require
+        // both 65% peak decay and 25% integrated density loss, before disposal.
         if (
           fade.maximum >= drag.maximum * 0.35 ||
           fade.mass >= drag.mass * 0.75
@@ -185,7 +186,7 @@ export async function fingerQA(
           errors.push(
             `Finger vapor did not fade: ${JSON.stringify({ drag, fade })}`,
           );
-        await run(135);
+        await run(80);
         disposed = await page.evaluate(
           (i) => ({
             density: __fingerRead(i),
@@ -287,20 +288,12 @@ export async function fingerQA(
         errors.push(
           `Horizontal touch gesture cancelled: ${JSON.stringify(horizontal)}`,
         );
-      await cdp.send("Input.dispatchTouchEvent", {
-        type: "touchStart",
-        touchPoints: [{ x: p.x, y: p.y + 150 }],
-      });
-      for (let j = 1; j <= 8; j++) {
-        await cdp.send("Input.dispatchTouchEvent", {
-          type: "touchMove",
-          touchPoints: [{ x: p.x, y: p.y + 150 - j * 16 }],
-        });
-        await page.waitForTimeout(20);
-      }
-      await cdp.send("Input.dispatchTouchEvent", {
-        type: "touchEnd",
-        touchPoints: [],
+      // Let the browser schedule one quick native swipe. Awaiting individual
+      // CDP events on a software GPU can unintentionally hold >200ms before
+      // the first move, testing a long press instead of a scrolling gesture.
+      await cdp.send("Input.synthesizeScrollGesture", {
+        x: p.x, y: p.y + 150, yDistance: -128,
+        speed: 800, preventFling: true, gestureSourceType: "touch",
       });
       await page.waitForTimeout(150);
       const vertical = await page.evaluate(() => ({

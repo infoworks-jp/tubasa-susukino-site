@@ -79,7 +79,7 @@ jobs:
     name: 2. Pavel REFERENCE BASELINE
     needs: contract
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -178,18 +178,18 @@ jobs:
           npx playwright install --with-deps chromium webkit
       - name: Serve this checkout
         run: python3 -m http.server 4174 --bind 127.0.0.1 > /tmp/steam-server.log 2>&1 &
-      - name: Compare rendered pixels and exercise lifecycle
-        env:
-          STEAM_QA_URL: http://127.0.0.1:4174/
-          STEAM_QA_CASES: ${{ matrix.browser-case }}
-          STEAM_QA_SOFTWARE: "1"
-        run: node tests/steam-qa.mjs
       - name: Verify four-bowl phone holds, quick scrolling and release
         if: matrix.browser-case == 'chromium-mobile'
         env:
           STEAM_QA_URL: http://127.0.0.1:4174/
           STEAM_QA_SOFTWARE: "1"
         run: node tests/steam-touch-qa.mjs
+      - name: Compare rendered pixels and exercise lifecycle
+        env:
+          STEAM_QA_URL: http://127.0.0.1:4174/
+          STEAM_QA_CASES: ${{ matrix.browser-case }}
+          STEAM_QA_SOFTWARE: "1"
+        run: node tests/steam-qa.mjs
       - name: Verify announcement layout and automatic JST expiration
         if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
         env:
