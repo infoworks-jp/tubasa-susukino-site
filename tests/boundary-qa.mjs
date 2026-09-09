@@ -58,7 +58,11 @@ for (const name of names) {
     await page.waitForFunction(() => getComputedStyle(document.querySelector("#top .hero-copy")).opacity === "1");
     for (let index = 0; index < 3; index++) {
       await page.evaluate(i => __tsubasaBoundaryPreview.focusBoundary(i), index);
-      await page.waitForTimeout(700);
+      await page.waitForFunction(i => {
+        const from=[document.querySelector("#top"),...document.querySelectorAll(".signature")][i];
+        return getComputedStyle(from.querySelector(".hero-copy,.signature-copy")).opacity === "1" &&
+          (!i || __tsubasaEffects.surfaces[i-1].ready);
+      },index);
       const check = await page.evaluate(i => {
         const sections = [document.querySelector("#top"), ...document.querySelectorAll(".signature")];
         const from = sections[i], to = sections[i+1], state = __tsubasaBoundaryPreview.state;
@@ -68,14 +72,18 @@ for (const name of names) {
         const a = image.getBoundingClientRect(), b = canvas?.getBoundingClientRect();
         return { index:i, gap:to.getBoundingClientRect().top-from.getBoundingClientRect().bottom, overlap:state.overlap,
           mask:getComputedStyle(image).maskImage, copyMask:getComputedStyle(copy).maskImage, copyOpacity:getComputedStyle(copy).opacity,
-          aligned:!canvas || ["x","y","width","height"].every(k => Math.abs(a[k]-b[k]) < .02),
+          alignmentError:canvas ? Math.max(...["x","y","width","height"].map(k => Math.abs(a[k]-b[k]))) : 0,
           sameMask:!canvas || getComputedStyle(image).maskImage === getComputedStyle(canvas).maskImage };
       }, index);
       assert.equal(check.gap, index === 1 ? 0 : -check.overlap);
       assert.notEqual(check.mask, "none");
       assert.equal(check.copyMask, "none");
       assert.equal(check.copyOpacity, "1");
-      assert(check.aligned && check.sameMask);
+      // Linux WebKit quantizes layout to 1/64px before the 1.55x photo
+      // transform: its unchanged renderer has a measured 0.02417px error.
+      // Allow two transformed layout units (<0.05px), still subpixel and
+      // much stricter than the existing rendered-steam gate's 1px limit.
+      assert(check.alignmentError < .05 && check.sameMask, JSON.stringify(check));
       await page.screenshot({ path:`${out}/${name}-${index}.png` });
       if (index !== 1) {
         const hit = await page.evaluate(i => {
@@ -102,7 +110,11 @@ for (const name of names) {
       const alphas = [];
       for (const delta of [0, 240, 0]) {
         await page.evaluate(({index,delta}) => { const s=__tsubasaBoundaryPreview.state; scrollTo({top:s.boundaries[index].bottom-s.overlap/2-s.viewport*.65+delta,behavior:"instant"}); }, {index,delta});
-        await page.waitForTimeout(100);
+        await page.waitForFunction(i => {
+          const s=__tsubasaBoundaryPreview.state,b=s.boundaries[i];
+          const expected=Math.max(0,Math.min(1,(s.viewport*.87-(b.bottom-scrollY-s.overlap/2))/(s.viewport*.75)));
+          return !s.raf && Math.abs(b.progress-expected)<.000001;
+        },index);
         alphas.push(await page.evaluate(i => getComputedStyle([document.querySelector("#top"), ...document.querySelectorAll(".signature")][i]).getPropertyValue("--boundary-alpha"), index));
       }
       assert(Number(alphas[1]) < Number(alphas[0]));
@@ -110,7 +122,7 @@ for (const name of names) {
       checks.push({...check, alphas});
     }
     await page.emulateMedia({ reducedMotion:"reduce" });
-    await page.waitForTimeout(120);
+    await page.waitForFunction(() => [document.querySelector("#top"),...document.querySelectorAll("[data-boundary-exit]")].every(e => getComputedStyle(e).getPropertyValue("--boundary-alpha") === "0.460"));
     assert(await page.evaluate(() => [document.querySelector("#top"),...document.querySelectorAll("[data-boundary-exit]")].every(e => getComputedStyle(e).getPropertyValue("--boundary-alpha") === "0.460")));
     const idle = await page.evaluate(() => __tsubasaBoundaryPreview.state.updates);
     await page.waitForTimeout(300);
