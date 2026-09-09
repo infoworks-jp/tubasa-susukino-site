@@ -153,6 +153,12 @@ for (const name of names) {
     result.engine = await page.evaluate(() =>
       window.__tsubasaEffects.inspect(),
     );
+    result.approvedMode = await page.evaluate(() => ({
+      style: __tsubasaEffects.pressureStyle,
+      phone: __tsubasaEffects.phoneRefinement,
+    }));
+    if (result.approvedMode.style !== "dynamic" || result.approvedMode.phone !== mobile)
+      fail(`Approved dynamic/mobile mode missing: ${JSON.stringify(result.approvedMode)}`);
     if (!result.engine.gpu || result.engine.contextCount !== 1)
       fail("Single GPU steam context unavailable");
     const targets = [
@@ -359,7 +365,7 @@ for (const name of names) {
     );
     result.errors.push(...result.pressure.errors);
     const approvedSource = await fs.readFile(
-      new URL("./fixtures/steam-approved-4e6b68e.js", import.meta.url),
+      new URL("./fixtures/steam-approved-dynamic-20260909.js", import.meta.url),
       "utf8",
     );
     const approved = await pressureQA(context, base, undefined, approvedSource);
@@ -375,6 +381,19 @@ for (const name of names) {
     }));
     if (result.preservation.some((s) => !s.ambientExact || !s.pressureExact))
       fail(`Approved steam changed: ${JSON.stringify(result.preservation)}`);
+    // The user approved stronger pressure and mobile idle visibility. Desktop
+    // idle steam must still match the previously approved production solver.
+    if (!mobile) {
+      const originalSource = await fs.readFile(
+        new URL("./fixtures/steam-approved-4e6b68e.js", import.meta.url), "utf8",
+      );
+      const original = await pressureQA(context, base, undefined, originalSource);
+      result.errors.push(...original.errors);
+      result.desktopIdlePreserved = result.pressure.results.every(
+        (s, i) => s.controlSHA256 === original.results[i].controlSHA256,
+      );
+      if (!result.desktopIdlePreserved) fail("Previous desktop idle steam changed");
+    }
     result.finger = await fingerQA(
       context,
       base,

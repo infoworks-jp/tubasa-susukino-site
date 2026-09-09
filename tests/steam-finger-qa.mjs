@@ -171,7 +171,7 @@ export async function fingerQA(
         );
       let fade = null,
         disposed = null;
-      // Common lifetime code needs one complete five-second decay per browser;
+      // Approved dynamic vapor has a 6.5-second lifetime; check full disposal.
       // all four roots above still exercise origin, hold, drag and momentum.
       if (index === 2 && rootIndex === 1) {
         await run(25);
@@ -185,7 +185,7 @@ export async function fingerQA(
           errors.push(
             `Finger vapor did not fade: ${JSON.stringify({ drag, fade })}`,
           );
-        await run(95);
+        await run(135);
         disposed = await page.evaluate(
           (i) => ({
             density: __fingerRead(i),

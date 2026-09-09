@@ -1,0 +1,20 @@
+/* Approved mobile steam: scoped to touch phones, with desktop styling preserved. */
+.phone-steam-hint { display:none; }
+@media all {
+  html.phone-steam-preview .signature .veil::before {
+    background:linear-gradient(180deg,rgba(0,0,0,.14),rgba(0,0,0,.08) 34%,transparent 58%);
+  }
+  html.phone-steam-preview .signature,
+  html.phone-steam-preview .signature img { -webkit-touch-callout:none; }
+  html.phone-steam-preview .signature img { -webkit-user-select:none; user-select:none; }
+  html.phone-steam-preview .phone-steam-hint {
+    display:block; position:absolute; z-index:10; top:86px; left:22px; margin:0;
+    font:500 12px/1.6 -apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;
+    color:#f0e3ce; letter-spacing:.04em; text-shadow:0 2px 5px #000,0 0 16px #000;
+    pointer-events:none!important; transition:color .2s ease;
+  }
+  html.phone-steam-preview .phone-steam-held .phone-steam-hint { color:#f6cb7f; }
+}
+@media(prefers-reduced-motion:reduce) {
+  html.phone-steam-preview .phone-steam-hint { display:none; }
+}

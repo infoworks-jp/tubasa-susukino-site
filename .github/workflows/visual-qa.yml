@@ -184,6 +184,12 @@ jobs:
           STEAM_QA_CASES: ${{ matrix.browser-case }}
           STEAM_QA_SOFTWARE: "1"
         run: node tests/steam-qa.mjs
+      - name: Verify four-bowl phone holds, quick scrolling and release
+        if: matrix.browser-case == 'chromium-mobile'
+        env:
+          STEAM_QA_URL: http://127.0.0.1:4174/
+          STEAM_QA_SOFTWARE: "1"
+        run: node tests/steam-touch-qa.mjs
       - name: Verify announcement layout and automatic JST expiration
         if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
         env:

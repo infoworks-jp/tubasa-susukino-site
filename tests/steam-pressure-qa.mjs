@@ -20,8 +20,8 @@ export async function pressureQA(
     source = source.replace(schedule, "window.__pressureTick = tick;");
     // These probes own time, visibility and presentation resolution. A native
     // resize/hover sync must not undo the 480px reset between two samples.
-    const size = "const width = s.signature\n      ? img.naturalWidth\n      : Math.min(660, img.naturalWidth);";
-    if (!source.includes(size)) throw Error("QA presentation size hook missing");
+    const size = /const width = s.signature\n\s+\?[^;]+?\n\s+: Math.min\(660, img.naturalWidth\);/;
+    if (!size.test(source)) throw Error("QA presentation size hook missing");
     source = source.replace(size, "const width = Math.min(480, img.naturalWidth);");
     // Isolate the approved photographic pressure layer. The additive finger
     // layer is exercised separately, with the complete production shader.
