@@ -41,8 +41,12 @@ try {
     assert(layout.dates.every(x=>x.fits), JSON.stringify(layout));
     // The announcement must not cover or intercept the existing CM control.
     await page.locator("#openCmPreview").click();
+    await page.locator("dialog[open]").waitFor({ state:"visible" });
     assert.equal(await page.locator("dialog[open]").count(), 1);
     await page.keyboard.press("Escape");
+    // Native WebKit dialog cancellation can complete after key dispatch returns.
+    // Wait for the observable close; an immediate count races the browser task.
+    await page.locator("dialog[open]").waitFor({ state:"detached" });
     assert.equal(await page.locator("dialog[open]").count(), 0);
     report.cases.push({ width, height, layout, cmControl:true });
     await context.close();
