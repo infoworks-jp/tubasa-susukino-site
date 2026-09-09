@@ -18,14 +18,20 @@ for(const mode of ['plain','plain-listener','no-gate','approved']) {
  } else await p.route('**/effects.js*',r=>r.fulfill({contentType:'text/javascript',body:mode==='no-gate'?source.replace('if (signature && phoneRefinement) {','if (false) {'):source}));
  await p.goto('http://127.0.0.1:4174/',{waitUntil:'load'});
  if(mode==='plain-listener')await p.evaluate(()=>document.querySelector('#target').addEventListener('touchmove',()=>{},{passive:false}));
- if(!mode.startsWith('plain'))await p.waitForFunction(()=>window.__tsubasaEffects?.surfaces[0]?.ready);
+ if(!mode.startsWith('plain'))await p.waitForFunction(()=>window.__tsubasaEffects?.surfaces.length===11);
  const point=await p.evaluate(simple=>{
   if(simple){scrollTo(0,3000);return{x:215,y:466};}
   const s=__tsubasaEffects.surfaces[0],r=s.image.getBoundingClientRect();scrollTo({top:scrollY+r.y+r.height*.5-innerHeight*.5,behavior:'instant'});return{x:innerWidth*.5,y:innerHeight*.5};
  },mode.startsWith('plain'));
  await p.waitForTimeout(400);
  const before=await p.evaluate(({x,y})=>{let n=document.elementFromPoint(x,y),a=[];while(n){const s=getComputedStyle(n);a.push({tag:n.tagName,id:n.id,cls:n.className,touch:s.touchAction,overflow:s.overflow,oy:s.overflowY});n=n.parentElement;}probe.events=[];probe.prevent=[];return{y:scrollY,h:innerHeight,doc:document.scrollingElement.scrollHeight,ancestors:a};},point);
- await cd.send('Input.synthesizeScrollGesture',{...point,yDistance:-128,speed:800,preventFling:true,gestureSourceType:'touch'});
+ // Direct native touch events; the synthesized gesture failed even on plain HTML.
+ const points=y=>[{x:point.x,y,id:1,radiusX:5,radiusY:5,force:.6}];
+ const inputStart=Date.now()/1000;
+ await cd.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points(point.y),timestamp:inputStart});
+ await cd.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(point.y-48),timestamp:inputStart+.04});
+ await cd.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(point.y-128),timestamp:inputStart+.10});
+ await cd.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:inputStart+.16});
  await p.waitForTimeout(500);
  const result=await p.evaluate(()=>({y:scrollY,...probe}));
  report.push({mode,before,delta:result.y-before.y,...result});
