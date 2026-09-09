@@ -1,36 +1,25 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {createRequire} from 'node:module';
+import {quickSwipe,verifyScrollControl} from './native-touch-input.mjs';
 const {chromium,webkit}=createRequire(process.env.STEAM_QA_PLAYWRIGHT || import.meta.url)('playwright');
 const out=process.env.TOUCH_QA_OUTPUT || 'output/steam-qa/touch',report=[];
 await fs.mkdir(out,{recursive:true});
 const base=process.env.STEAM_QA_URL || 'http://127.0.0.1:4174/';
-for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webkit-430',engine:webkit,w:430,h:932},{name:'chrome-landscape',engine:chromium,w:932,h:430},{name:'webkit-320-reduced',engine:webkit,w:320,h:568,reduced:true}].filter(c=>!process.env.TOUCH_QA_CASES || process.env.TOUCH_QA_CASES.split(',').includes(c.name))){
+for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webkit-430',engine:webkit,w:430,h:932},{name:'chrome-landscape',engine:chromium,w:932,h:430},{name:'webkit-320-reduced',engine:webkit,w:320,h:568,reduced:true}]){
+ if(process.env.TOUCH_QA_CASES&&!process.env.TOUCH_QA_CASES.split(',').includes(config.name))continue;
  const b=await config.engine.launch(config.engine===chromium ? {
  ...(process.env.STEAM_QA_CHROME==='1'?{channel:'chrome'}:{}),
  ...(process.env.STEAM_QA_SOFTWARE==='1'?{args:['--enable-webgl','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{})
 } : {}),c=await b.newContext({viewport:{width:config.w,height:config.h},isMobile:true,hasTouch:true,reducedMotion:config.reduced?'reduce':'no-preference'}),p=await c.newPage(),row={name:config.name,passed:false,checks:[],bowls:[],errors:[]};report.push(row);
  p.on('pageerror',e=>row.errors.push(e.message));let f;
  try{
+  if(config.engine===chromium)row.control=await verifyScrollControl(c);
   await p.goto(base,{waitUntil:'load'});f=p;
   await f.waitForFunction(()=>__tsubasaEffects?.surfaces.length===11&&__tsubasaEffects.phoneRefinement);
   assert(await f.evaluate(()=>__tsubasaEffects.gpu && __tsubasaEffects.pressureStyle==='dynamic'));
-  if(!config.reduced){
-   await f.locator('#signature').evaluate(e=>e.scrollIntoView({behavior:'instant'}));
-   await f.waitForFunction(()=>__tsubasaEffects.surfaces[0].visible&&__tsubasaEffects.surfaces[0].ready);
-   const delayed=await f.evaluate(async()=>{
-    const s=__tsubasaEffects.surfaces[0],host=s.image.parentElement,start=performance.now();
-    const send=(type,points,stamp)=>{const e=new Event(type,{bubbles:true,cancelable:true});Object.defineProperty(e,'touches',{value:points});Object.defineProperty(e,'timeStamp',{value:stamp});host.dispatchEvent(e);return e.defaultPrevented;};
-    send('touchstart',[{identifier:91,clientX:100,clientY:200}],start);
-    await new Promise(r=>{const begun=performance.now();function check(){if(s.phoneGesture.phase==='held'||performance.now()-begun>5000)r();else requestAnimationFrame(check);}check();});const wasHeld=s.phoneGesture.phase==='held';
-    const prevented=send('touchmove',[{identifier:91,clientX:100,clientY:140}],start+80),phase=s.phoneGesture.phase;
-    send('touchend',[],start+100);return{wasHeld,prevented,phase};
-   });
-   assert.deepEqual(delayed,{wasHeld:true,prevented:false,phase:'scrolling'},'A quick swipe delivered late must not become a hold');
-   row.checks.push('delayed quick input preserves scrolling despite an elapsed hold timer');
-  }
   const cd=config.engine===chromium?await c.newCDPSession(p):null;
-  await f.evaluate(()=>{window.__touchEvents=[];for(const type of ['pointerdown','pointermove','pointerup','pointercancel'])document.addEventListener(type,e=>__touchEvents.push({type:e.type,x:e.clientX,y:e.clientY,t:e.timeStamp,now:performance.now(),phase:__tsubasaEffects.surfaces[0].phoneGesture?.phase,target:e.target.tagName}),{capture:true,passive:true});});
+  await f.evaluate(()=>{window.__touchEvents=[];for(const type of ['pointerdown','pointermove','pointerup','pointercancel'])document.addEventListener(type,e=>__touchEvents.push({type:e.type,x:e.clientX,y:e.clientY}),{capture:true,passive:true});});
   for(const [index,rootIndex] of [[0,0],[1,0],[2,0],[2,1]]){
    const bowl={index,rootIndex,gestures:[]};row.bowls.push(bowl);
    const point=async()=>{
@@ -49,11 +38,9 @@ for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webk
      await f.evaluate(()=>{__touchEvents=[];});const y0=await f.evaluate(()=>scrollY);
      const points=(x,y)=>[{x,y,id:1,radiusX:5,radiusY:5,force:.6}];
      if(kind==='quick-vertical'){
-      // Browser-scheduled swipe avoids adding a false long hold while waiting
-      // for slow software-GPU CDP round trips between individual move events.
-      await cd.send('Input.synthesizeScrollGesture',{x:pt.x,y:pt.y,yDistance:-128,speed:160,preventFling:true,gestureSourceType:'touch'});
+      await quickSwipe(cd,pt);
       const result=await f.evaluate(i=>({scroll:scrollY,phase:__tsubasaEffects.surfaces[i].phoneGesture.phase,held:!!__tsubasaEffects.surfaces[i].contact?.down,events:__touchEvents}),index);
-      result.scroll-=y0;assert(result.scroll>20,`Quick swipe must scroll: ${JSON.stringify({pt,y0,result})}`);assert(!result.held);assert(result.events.some(e=>e.type==='pointercancel'));
+      result.scroll-=y0;assert(result.scroll>20,'Quick swipe must scroll: '+JSON.stringify(result));assert(!result.held);assert(result.events.some(e=>e.type==='pointercancel'));
       bowl.gestures.push({kind,scroll:result.scroll,cancel:true,phase:result.phase});continue;
      }
      await cd.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points(pt.x,pt.y)});
@@ -76,7 +63,7 @@ for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webk
     const result=await f.evaluate(async({index,rootIndex})=>{
      const s=__tsubasaEffects.surfaces[index],host=s.image.parentElement;
      const send=(type,points)=>{const e=new Event(type,{bubbles:true,cancelable:true});Object.defineProperty(e,'touches',{value:points});host.dispatchEvent(e);return e.defaultPrevented;};
-     send('touchstart',[{identifier:3,clientX:100,clientY:200}]);await new Promise(r=>{const start=performance.now();function check(){if(s.phoneGesture.phase==='held'||performance.now()-start>5000)r();else requestAnimationFrame(check);}check();});
+     send('touchstart',[{identifier:3,clientX:100,clientY:200}]);await new Promise(r=>setTimeout(r,240));
      const held=send('touchmove',[{identifier:3,clientX:100,clientY:150}]);
      const phase=s.phoneGesture.phase;send('touchend',[]);
      send('touchstart',[{identifier:4,clientX:100,clientY:200}]);

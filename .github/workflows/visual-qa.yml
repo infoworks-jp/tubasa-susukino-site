@@ -15,7 +15,7 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.55.0
       - run: npx playwright install --with-deps chromium
       - run: python3 -m http.server 4174 --bind 127.0.0.1 > /tmp/steam-server.log 2>&1 &
-      - run: node tests/touch-control-diagnosis.mjs
+      - run: node tests/steam-touch-qa.mjs
         env:
           STEAM_QA_SOFTWARE: "1"
           TOUCH_QA_CASES: chrome-430

@@ -796,49 +796,26 @@ void main(){
       host.append(hint);
       s.hint = hint;
       sync(s);
-      let holdTimer = 0, holdFrame = 0, touch = null;
+      let holdTimer = 0, touch = null;
       s.phoneGesture = { phase:"idle", holds:0, moves:0, scrolls:0 };
       const resetTouch = () => {
-        clearTimeout(holdTimer); cancelAnimationFrame(holdFrame); touch = null;
+        clearTimeout(holdTimer); touch = null;
         s.phoneGesture.phase = "idle";
         host.classList.remove("phone-steam-held");
       };
       s.resetPhoneTouch = resetTouch;
-      const releaseEarlySwipe = (e, x, y) => {
-        if (!touch || Math.hypot(x-touch.x,y-touch.y) <= 7 ||
-            e.timeStamp-touch.started >= state.gestureHoldMs) return false;
-        clearTimeout(holdTimer); touch.scrolling = true; touch.held = false;
-        host.classList.remove("phone-steam-held");
-        if (s.phoneGesture.phase !== "scrolling") s.phoneGesture.scrolls++;
-        s.phoneGesture.phase = "scrolling";
-        return true;
-      };
-      // Chromium can regenerate a TouchEvent's timestamp on delayed delivery.
-      // Its earlier PointerEvent retains the input timestamp; release the gate
-      // in capture phase before the matching touchmove can prevent scrolling.
-      host.addEventListener("pointermove", e => {
-        if (e.pointerType === "touch") releaseEarlySwipe(e, e.clientX, e.clientY);
-      }, { capture:true, passive:true });
       host.addEventListener("touchstart", e => {
         resetTouch();
         if (motion.matches || !state.gpu || e.touches.length !== 1 ||
             e.target.closest?.("a,button,input,select,textarea")) return;
         const t = e.touches[0];
-        touch = { id:t.identifier, x:t.clientX, y:t.clientY, started:e.timeStamp, scrolling:false, held:false };
+        touch = { id:t.identifier, x:t.clientX, y:t.clientY, scrolling:false, held:false };
         s.phoneGesture.phase = "pending";
-        const heldTouch = touch;
         holdTimer = setTimeout(() => {
-          // Give queued native input two presentation opportunities before
-          // claiming the gesture. Under severe rendering lag, scrolling wins
-          // instead of a wall-clock timer stealing an already-moving swipe.
-          holdFrame = requestAnimationFrame(() => {
-            holdFrame = requestAnimationFrame(() => {
-              if (touch !== heldTouch || touch.scrolling || document.hidden || !state.gpu) return;
-              touch.held = true;
-              s.phoneGesture.phase = "held"; s.phoneGesture.holds++;
-              host.classList.add("phone-steam-held");
-            });
-          });
+          if (!touch || touch.scrolling || document.hidden || !state.gpu) return;
+          touch.held = true;
+          s.phoneGesture.phase = "held"; s.phoneGesture.holds++;
+          host.classList.add("phone-steam-held");
         }, state.gestureHoldMs);
       }, { passive:true });
       host.addEventListener("touchmove", e => {
@@ -846,10 +823,6 @@ void main(){
         if (e.touches.length !== 1) { resetTouch(); return; }
         const t = [...e.touches].find(t => t.identifier === touch.id);
         if (!t) { resetTouch(); return; }
-        // A busy renderer can deliver a quick move after the hold timer fired.
-        // Use the input's original timestamp, not delivery time, so that swipe
-        // still scrolls. A genuine move after a stationary hold remains held.
-        if (releaseEarlySwipe(e, t.clientX, t.clientY)) return;
         if (touch.held && e.cancelable) {
           // Cancel only an intentional held gesture. Never change touch-action
           // mid-gesture, and never prevent a normal quick page swipe.
