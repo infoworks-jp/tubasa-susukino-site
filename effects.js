@@ -809,7 +809,7 @@ void main(){
         if (motion.matches || !state.gpu || e.touches.length !== 1 ||
             e.target.closest?.("a,button,input,select,textarea")) return;
         const t = e.touches[0];
-        touch = { id:t.identifier, x:t.clientX, y:t.clientY, scrolling:false, held:false };
+        touch = { id:t.identifier, x:t.clientX, y:t.clientY, started:e.timeStamp, scrolling:false, held:false };
         s.phoneGesture.phase = "pending";
         holdTimer = setTimeout(() => {
           if (!touch || touch.scrolling || document.hidden || !state.gpu) return;
@@ -823,6 +823,17 @@ void main(){
         if (e.touches.length !== 1) { resetTouch(); return; }
         const t = [...e.touches].find(t => t.identifier === touch.id);
         if (!t) { resetTouch(); return; }
+        // A busy renderer can deliver a quick move after the hold timer fired.
+        // Use the input's original timestamp, not delivery time, so that swipe
+        // still scrolls. A genuine move after a stationary hold remains held.
+        if (Math.hypot(t.clientX-touch.x,t.clientY-touch.y) > 7 &&
+            e.timeStamp-touch.started < state.gestureHoldMs) {
+          clearTimeout(holdTimer); touch.scrolling = true; touch.held = false;
+          host.classList.remove("phone-steam-held");
+          if (s.phoneGesture.phase !== "scrolling") s.phoneGesture.scrolls++;
+          s.phoneGesture.phase = "scrolling";
+          return;
+        }
         if (touch.held && e.cancelable) {
           // Cancel only an intentional held gesture. Never change touch-action
           // mid-gesture, and never prevent a normal quick page swipe.
