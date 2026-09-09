@@ -320,7 +320,13 @@ export async function fingerQA(
       await cdp.detach();
     }
     await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
-    await page.waitForTimeout(100);
+    // Software-rendered CI can take >300ms per frame. Wait for the actual
+    // offscreen observer cleanup, not a delay shorter than one browser frame.
+    await page.waitForFunction(
+      () => __tsubasaEffects.surfaces.every((s) => !s.finger),
+      null,
+      { timeout: 10000 },
+    );
     const remaining = await page.evaluate(
       () => __tsubasaEffects.surfaces.filter((s) => s.finger).length,
     );

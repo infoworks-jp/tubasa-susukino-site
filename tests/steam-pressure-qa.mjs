@@ -119,6 +119,11 @@ export async function pressureQA(
       await page.mouse.move(point.x, point.y);
       const reset = () =>
         page.evaluate((i) => window.__pressureReset(i), index);
+      // Prime texture uploads, allocation and the first presentation before
+      // either measured A/B sample. The first bowl must start from the same
+      // fully initialized GPU state as the later bowls/reference page.
+      await reset();
+      await run(2);
       const control = (phase) =>
         page.evaluate(
           ({ index, phase }) => {

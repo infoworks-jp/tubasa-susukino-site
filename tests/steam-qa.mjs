@@ -364,6 +364,7 @@ for (const name of names) {
     );
     const approved = await pressureQA(context, base, undefined, approvedSource);
     result.errors.push(...approved.errors);
+    result.approvedPressure = approved;
     result.preservation = result.pressure.results.map((s, i) => ({
       profile: s.profile,
       rootIndex: s.rootIndex,
