@@ -1,0 +1,85 @@
+/* Approved scene boundaries. Blend existing photographic surfaces;
+   the steam renderer stays untouched. */
+html.boundary-blend #top {
+  z-index: 5;
+  background: transparent;
+}
+html.boundary-blend #signature,
+html.boundary-blend .signature-tsubasa {
+  margin-top: calc(-1 * var(--boundary-overlap));
+}
+html.boundary-blend #signature { z-index: 4; background: transparent; }
+html.boundary-blend .signature-butter-corn { z-index: 3; background: transparent; }
+/* Keep miso and butter-corn at their original distance. Only their images
+   dissolve through the shared black; neither bowl is pulled toward the other. */
+html.boundary-blend .signature-butter-corn { margin-top: 0; }
+html.boundary-blend #top > .fluid-text-stage,
+html.boundary-blend #top > .veil,
+html.boundary-blend [data-boundary-exit="ramen"] > .veil {
+  -webkit-mask-image: linear-gradient(to bottom,
+    #000 0,
+    #000 calc(100% - var(--boundary-overlap)),
+    rgba(0,0,0,.86) calc(100% - var(--boundary-overlap) * .72),
+    rgba(0,0,0,var(--boundary-alpha,.46)) calc(100% - var(--boundary-overlap) * .38),
+    transparent 100%);
+  mask-image: linear-gradient(to bottom,
+    #000 0,
+    #000 calc(100% - var(--boundary-overlap)),
+    rgba(0,0,0,.86) calc(100% - var(--boundary-overlap) * .72),
+    rgba(0,0,0,var(--boundary-alpha,.46)) calc(100% - var(--boundary-overlap) * .38),
+    transparent 100%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+/* Measure the fade in section space, then map it into the already transformed
+   replaced element. The image and its existing live canvas share one mask. */
+html.boundary-blend [data-boundary-exit="ramen"] > .media,
+html.boundary-blend [data-boundary-exit="ramen"] > .steam-photo {
+  -webkit-mask-image: linear-gradient(to bottom,
+    #000 0, #000 var(--boundary-photo-start),
+    rgba(0,0,0,.86) var(--boundary-photo-mid1),
+    rgba(0,0,0,var(--boundary-alpha,.46)) var(--boundary-photo-mid2),
+    transparent var(--boundary-photo-end), transparent 100%) !important;
+  mask-image: linear-gradient(to bottom,
+    #000 0, #000 var(--boundary-photo-start),
+    rgba(0,0,0,.86) var(--boundary-photo-mid1),
+    rgba(0,0,0,var(--boundary-alpha,.46)) var(--boundary-photo-mid2),
+    transparent var(--boundary-photo-end), transparent 100%) !important;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+/* Text, photo transforms, filters and dimensions remain as approved. */
+.boundary-hit-region { display: none; }
+/* Transparent photographic tails must not intercept the next bowl's input.
+   These input-only regions do not mask, move or repaint any photograph. */
+html.boundary-blend [data-boundary-hit-region],
+html.boundary-blend [data-boundary-hit-region] *,
+html.boundary-blend #top[data-boundary-hit-region] #fluidTextCanvas {
+  pointer-events: none !important;
+}
+html.boundary-blend [data-boundary-hit-region] .boundary-hit-region {
+  display: block;
+  position: absolute;
+  inset: 0 0 calc(var(--boundary-overlap) * .5);
+  z-index: 9;
+  pointer-events: auto !important;
+}
+html.boundary-blend [data-boundary-spacing="original"] > .media,
+html.boundary-blend [data-boundary-spacing="original"] > .steam-photo {
+  -webkit-mask-image: linear-gradient(to bottom,
+    transparent 0, transparent var(--boundary-photo-entry-start),
+    rgba(0,0,0,.55) var(--boundary-photo-entry-mid),
+    #000 var(--boundary-photo-entry-end),
+    #000 var(--boundary-photo-start),
+    rgba(0,0,0,.86) var(--boundary-photo-mid1),
+    rgba(0,0,0,var(--boundary-alpha,.46)) var(--boundary-photo-mid2),
+    transparent var(--boundary-photo-end), transparent 100%) !important;
+  mask-image: linear-gradient(to bottom,
+    transparent 0, transparent var(--boundary-photo-entry-start),
+    rgba(0,0,0,.55) var(--boundary-photo-entry-mid),
+    #000 var(--boundary-photo-entry-end),
+    #000 var(--boundary-photo-start),
+    rgba(0,0,0,.86) var(--boundary-photo-mid1),
+    rgba(0,0,0,var(--boundary-alpha,.46)) var(--boundary-photo-mid2),
+    transparent var(--boundary-photo-end), transparent 100%) !important;
+}
