@@ -51,7 +51,7 @@ for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webk
      if(kind==='quick-vertical'){
       // Browser-scheduled swipe avoids adding a false long hold while waiting
       // for slow software-GPU CDP round trips between individual move events.
-      await cd.send('Input.synthesizeScrollGesture',{x:pt.x,y:pt.y,yDistance:-96,speed:800,preventFling:true,gestureSourceType:'touch'});
+      await cd.send('Input.synthesizeScrollGesture',{x:pt.x,y:pt.y,yDistance:-128,speed:160,preventFling:true,gestureSourceType:'touch'});
       const result=await f.evaluate(i=>({scroll:scrollY,phase:__tsubasaEffects.surfaces[i].phoneGesture.phase,held:!!__tsubasaEffects.surfaces[i].contact?.down,events:__touchEvents}),index);
       result.scroll-=y0;assert(result.scroll>20,`Quick swipe must scroll: ${JSON.stringify({pt,y0,result})}`);assert(!result.held);assert(result.events.some(e=>e.type==='pointercancel'));
       bowl.gestures.push({kind,scroll:result.scroll,cancel:true,phase:result.phase});continue;
@@ -76,7 +76,7 @@ for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webk
     const result=await f.evaluate(async({index,rootIndex})=>{
      const s=__tsubasaEffects.surfaces[index],host=s.image.parentElement;
      const send=(type,points)=>{const e=new Event(type,{bubbles:true,cancelable:true});Object.defineProperty(e,'touches',{value:points});host.dispatchEvent(e);return e.defaultPrevented;};
-     send('touchstart',[{identifier:3,clientX:100,clientY:200}]);await new Promise(r=>setTimeout(r,240));
+     send('touchstart',[{identifier:3,clientX:100,clientY:200}]);await new Promise(r=>{const start=performance.now();function check(){if(s.phoneGesture.phase==='held'||performance.now()-start>5000)r();else requestAnimationFrame(check);}check();});
      const held=send('touchmove',[{identifier:3,clientX:100,clientY:150}]);
      const phase=s.phoneGesture.phase;send('touchend',[]);
      send('touchstart',[{identifier:4,clientX:100,clientY:200}]);
