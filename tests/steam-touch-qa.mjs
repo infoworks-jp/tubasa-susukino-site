@@ -15,6 +15,18 @@ for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webk
   await p.goto(base,{waitUntil:'load'});f=p;
   await f.waitForFunction(()=>__tsubasaEffects?.surfaces.length===11&&__tsubasaEffects.phoneRefinement);
   assert(await f.evaluate(()=>__tsubasaEffects.gpu && __tsubasaEffects.pressureStyle==='dynamic'));
+  if(!config.reduced){
+   const delayed=await f.evaluate(async()=>{
+    const s=__tsubasaEffects.surfaces[0],host=s.image.parentElement,start=performance.now();
+    const send=(type,points,stamp)=>{const e=new Event(type,{bubbles:true,cancelable:true});Object.defineProperty(e,'touches',{value:points});Object.defineProperty(e,'timeStamp',{value:stamp});host.dispatchEvent(e);return e.defaultPrevented;};
+    send('touchstart',[{identifier:91,clientX:100,clientY:200}],start);
+    await new Promise(r=>setTimeout(r,250));const wasHeld=s.phoneGesture.phase==='held';
+    const prevented=send('touchmove',[{identifier:91,clientX:100,clientY:140}],start+80),phase=s.phoneGesture.phase;
+    send('touchend',[],start+100);return{wasHeld,prevented,phase};
+   });
+   assert.deepEqual(delayed,{wasHeld:true,prevented:false,phase:'scrolling'},'A quick swipe delivered late must not become a hold');
+   row.checks.push('delayed quick input preserves scrolling despite an elapsed hold timer');
+  }
   const cd=config.engine===chromium?await c.newCDPSession(p):null;
   await f.evaluate(()=>{window.__touchEvents=[];for(const type of ['pointerdown','pointermove','pointerup','pointercancel'])document.addEventListener(type,e=>__touchEvents.push({type:e.type,x:e.clientX,y:e.clientY,t:e.timeStamp,now:performance.now(),phase:__tsubasaEffects.surfaces[0].phoneGesture?.phase,target:e.target.tagName}),{capture:true,passive:true});});
   for(const [index,rootIndex] of [[0,0],[1,0],[2,0],[2,1]]){
