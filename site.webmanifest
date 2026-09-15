@@ -1,0 +1,31 @@
+{
+  "id": "/",
+  "name": "味一番つばさ",
+  "short_name": "つばさ",
+  "lang": "ja",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050303",
+  "theme_color": "#050303",
+  "icons": [
+    {
+      "src": "/assets/icons/tsubasa-app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/tsubasa-app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/tsubasa-app-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
