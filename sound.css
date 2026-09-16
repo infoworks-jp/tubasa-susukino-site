@@ -1,0 +1,5 @@
+.sound-toggle{position:fixed;left:max(20px,env(safe-area-inset-left));top:calc(84px + env(safe-area-inset-top));z-index:60;display:flex;align-items:center;justify-content:center;gap:8px;min-width:116px;min-height:48px;padding:10px 14px;border:1px solid #8b6b42;border-radius:28px;background:#17100eed;color:#f3ede2;box-shadow:0 2px 14px #0000000d;font:500 10px/1.2 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;cursor:pointer;touch-action:manipulation}
+.sound-toggle[hidden]{display:none}.sound-toggle svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.sound-toggle .sound-waves{display:none}.sound-toggle[aria-pressed="true"] .sound-waves{display:inline}.sound-toggle[aria-pressed="true"] .sound-mute{display:none}.sound-toggle[aria-pressed="true"]{border-color:#e9bb73;color:#e9bb73}
+.sound-toggle:focus-visible{outline:3px solid #e9bb73;outline-offset:4px}
+@media(max-width:768px){.sound-toggle{left:max(12px,env(safe-area-inset-left));top:calc(72px + env(safe-area-inset-top));min-width:108px;padding:10px 12px}}
