@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify SEO metadata, structured data and static menu consistency
+        run: npm run test:seo
       - name: Enforce source and manager contract
         shell: bash
         run: |

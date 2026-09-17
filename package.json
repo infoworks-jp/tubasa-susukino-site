@@ -2,6 +2,8 @@
   "name": "tubasa-susukino-site",
   "private": true,
   "scripts": {
+    "build:seo": "node scripts/build-seo.mjs",
+    "test:seo": "node scripts/build-seo.mjs --check && node tests/seo-qa.mjs",
     "build:fluid": "esbuild fluid-text.js --bundle --format=esm --target=es2022 --minify --outfile=vendor/fluid-text.bundle.js"
   },
   "devDependencies": {

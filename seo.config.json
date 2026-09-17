@@ -1,0 +1,45 @@
+{
+  "url": "https://www.tubasa-susukino.com/",
+  "name": "味一番つばさ",
+  "title": "【公式】味一番つばさ｜札幌すすきの・新ラーメン横丁の味噌ラーメン",
+  "description": "札幌すすきの・新ラーメン横丁の「味一番つばさ」公式サイト。究極の味噌ラーメン、バターコーン、いくら丼とハーフラーメンのつばさラーメンをご紹介。営業時間11:00〜翌3:00、月曜定休。メニュー・価格は日本語、英語、中国語、韓国語で確認できます。",
+  "lastModified": "2026-09-17",
+  "telephone": "+81-11-521-5963",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "JP",
+    "addressRegion": "北海道",
+    "addressLocality": "札幌市中央区",
+    "streetAddress": "南4条西3丁目1-1 第3グリーンビル 新ラーメン横丁"
+  },
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      "opens": "11:00",
+      "closes": "03:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": "Monday",
+      "opens": "00:00",
+      "closes": "00:00"
+    }
+  ],
+  "specialOpeningHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "validFrom": "2026-09-21",
+      "validThrough": "2026-09-21",
+      "opens": "11:00",
+      "closes": "03:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "validFrom": "2026-09-24",
+      "validThrough": "2026-09-24",
+      "opens": "00:00",
+      "closes": "00:00"
+    }
+  ]
+}
