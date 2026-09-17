@@ -18,6 +18,10 @@ assert.equal((head.match(/<title>/g) || []).length, 1);
 assert(head.includes('<title>' + config.title + '</title>'));
 assert(head.includes('max-image-preview:large'));
 assert(!head.includes('noindex'));
+assert.equal((head.match(/name="google-site-verification"/g) || []).length, 1);
+assert.equal(head.match(/<meta name="google-site-verification" content="([^"]+)">/)?.[1],
+  config.googleSiteVerification, 'Keep the approved Search Console ownership token in the homepage head.');
+assert(/^[A-Za-z0-9_-]+$/.test(config.googleSiteVerification ?? ''));
 for (const token of ['味一番つばさ', 'すすきの', '新ラーメン横丁', '味噌ラーメン']) {
   assert(config.title.includes(token), 'Descriptive title: ' + token);
 }
