@@ -196,6 +196,13 @@ jobs:
         env:
           STEAM_QA_CASES: ${{ matrix.browser-case }}
         run: node tests/boundary-qa.mjs
+      - name: Verify menu navigation, language tabs and visit links
+        if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
+        env:
+          STEAM_QA_URL: http://127.0.0.1:4174/
+          UX_QA_ENGINE: ${{ startsWith(matrix.browser-case, 'webkit') && 'webkit' || 'chromium' }}
+          UX_QA_OUTPUT: output/steam-qa/site-ux
+        run: node tests/site-ux-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

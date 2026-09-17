@@ -19,7 +19,20 @@ for(const panel of document.querySelectorAll('.menu-panel')){const lang=panel.da
 const dialog=document.querySelector('#menuDialog'),img=document.querySelector('#menuImage'),label=document.querySelector('#menuLabel');
 document.querySelectorAll('[data-menu]').forEach(b=>b.addEventListener('click',()=>{img.hidden=false;img.src=b.dataset.menu;img.alt=b.dataset.label||'';label.textContent=b.dataset.label||'';dialog.showModal()}));
 if(dialog){dialog.querySelector('.close').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()})}
-const tabs=[...document.querySelectorAll('.menu-tab')],panels=[...document.querySelectorAll('.menu-panel')];tabs.forEach(tab=>tab.addEventListener('click',()=>{const lang=tab.dataset.lang;tabs.forEach(t=>t.classList.toggle('active',t===tab));panels.forEach(p=>p.classList.toggle('active',p.dataset.panel===lang))}));
+const tabs=[...document.querySelectorAll('.menu-tab')],panels=[...document.querySelectorAll('.menu-panel')];
+function selectMenu(tab){
+  tabs.forEach(t=>{const selected=t===tab;t.classList.toggle('active',selected);t.setAttribute('aria-selected',String(selected));t.tabIndex=selected?0:-1});
+  panels.forEach(p=>{const selected=p.dataset.panel===tab.dataset.lang;p.classList.toggle('active',selected);p.hidden=!selected});
+}
+tabs.forEach((tab,index)=>{
+  tab.addEventListener('click',()=>selectMenu(tab));
+  tab.addEventListener('keydown',event=>{
+    const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index+tabs.length-1)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:null;
+    if(next===null)return;
+    event.preventDefault();selectMenu(tabs[next]);tabs[next].focus();
+  });
+});
+if(tabs.length)selectMenu(tabs.find(tab=>tab.classList.contains('active'))||tabs[0]);
 window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCount:MENU.ja.length,languages:Object.keys(MENU)};
 })();
 

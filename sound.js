@@ -10,7 +10,7 @@
   function display(on) {
     enabled = on;
     button.setAttribute('aria-pressed', String(on));
-    button.setAttribute('aria-label', on ? '音をオフにする' : '音をオンにする');
+    button.setAttribute('aria-label', on ? 'SOUND ON — 音をオフにする' : 'SOUND OFF — 音をオンにする');
     label.textContent = on ? 'SOUND ON' : 'SOUND OFF';
   }
   if (!Audio) { button.hidden = true; return; }

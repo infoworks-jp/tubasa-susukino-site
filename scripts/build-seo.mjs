@@ -101,7 +101,7 @@ for (const [lang, htmlLang] of Object.entries(languages)) {
   const pattern = new RegExp('(<div class="menu-panel[^"]*" data-panel="' + lang +
     '")[^>]*><div class="menu-text-list"[^>]*>[\\s\\S]*?(?=<div class="menu-sheet-card">)');
   if (!pattern.test(html)) throw new Error('Missing static menu panel: ' + lang);
-  html = html.replace(pattern, '$1 lang="' + htmlLang + '"><div class="menu-text-list" data-complete="40-item-master">\n' +
+  html = html.replace(pattern, '$1 lang="' + htmlLang + '" id="menu-panel-' + lang + '" role="tabpanel" aria-labelledby="menu-tab-' + lang + '" tabindex="0"' + (lang === 'ja' ? '' : ' hidden') + '><div class="menu-text-list" data-complete="40-item-master">\n' +
     rows + '\n</div>');
 }
 const outputs = new Map([

@@ -58,7 +58,7 @@ assert(!JSON.stringify(ld).match(/aggregateRating|reviewCount|SearchAction/),
   'Do not invent reviews, ratings or an internal search feature.');
 for (const language of Object.keys(menu)) {
   const section = body.match(new RegExp('data-panel="' + language +
-    '" lang="[^"]+"><div class="menu-text-list"[^>]*>([\\s\\S]*?)<div class="menu-sheet-card">'))?.[1];
+    '" lang="[^"]+"[^>]*><div class="menu-text-list"[^>]*>([\\s\\S]*?)<div class="menu-sheet-card">'))?.[1];
   assert(section, 'Static menu missing: ' + language);
   const rows = [...section.matchAll(/<div class="menu-row[^"]*"><b>([^<]*)<\/b><span>([^<]*)<\/span><\/div>/g)];
   assert.equal(rows.length, menu[language].length, language);
@@ -73,7 +73,7 @@ assert(body.includes('alt="味一番つばさ公式サイト 二次元コード"
 assert(!head.includes('hreflang='));
 assert(head.includes('assets/link-preview-20260916.jpg'));
 assert(head.includes('favicon.ico?v=20260915-tsubasa'));
-assert(body.includes('sound.js?v=20260916-scenes-2'));
+assert(body.includes('sound.js?v=20260917-label'));
 for (const image of [...restaurant.image, restaurant.logo]) {
   const url = new URL(image);
   assert.equal(url.origin, new URL(config.url).origin);
