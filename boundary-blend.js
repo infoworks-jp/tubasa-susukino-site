@@ -3,7 +3,7 @@
   const autoStart = document.currentScript?.hasAttribute("data-boundary-autostart");
   const root = document.documentElement;
   const definitions = [
-    ["street-miso", "交差点 → 究極", "#top", "#signature"],
+    ["street-film", "交差点 → 調理動画", "#top", "#videoTop"],
     ["miso-butter", "究極 → バターコーン", "#signature", ".signature-butter-corn"],
     ["butter-tsubasa", "バターコーン → つばさ", ".signature-butter-corn", ".signature-tsubasa"],
   ];
@@ -31,7 +31,7 @@
     if (street) {
       for (const type of ["pointerenter", "pointerdown", "pointermove", "pointerup", "pointercancel", "pointerleave"])
         hit.addEventListener(type, event => {
-          const canvas = host.querySelector("canvas");
+          const canvas = host.querySelector("#fluidTextCanvas");
           if (canvas) canvas.dispatchEvent(new PointerEvent(type, {
             clientX:event.clientX, clientY:event.clientY, pointerId:event.pointerId,
             pointerType:event.pointerType, isPrimary:event.isPrimary,

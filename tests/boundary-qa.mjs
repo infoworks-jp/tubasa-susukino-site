@@ -65,7 +65,7 @@ for (const name of names) {
       },index);
       const check = await page.evaluate(i => {
         const sections = [document.querySelector("#top"), ...document.querySelectorAll(".signature")];
-        const from = sections[i], to = sections[i+1], state = __tsubasaBoundaryPreview.state;
+        const from = sections[i], to = i===0 ? document.querySelector("#videoTop") : sections[i+1], state = __tsubasaBoundaryPreview.state;
         const image = from.querySelector(i ? ".media" : ".fluid-text-stage");
         const copy = from.querySelector(".hero-copy,.signature-copy");
         const canvas = i ? from.querySelector(".steam-photo") : null;
@@ -88,7 +88,7 @@ for (const name of names) {
       if (index !== 1) {
         const hit = await page.evaluate(i => {
           const sections=[document.querySelector("#top"),...document.querySelectorAll(".signature")];
-          const from=sections[i],to=sections[i+1],bottom=from.getBoundingClientRect().bottom;
+          const from=sections[i],to=i===0?document.querySelector("#videoTop"):sections[i+1],bottom=from.getBoundingClientRect().bottom;
           const overlap=__tsubasaBoundaryPreview.state.overlap,x=innerWidth*.55;
           const upper=bottom-overlap*.75,lower=bottom-overlap*.25;
           return {x,upper,lower,upperOwns:from.contains(document.elementFromPoint(x,upper)),
@@ -99,7 +99,7 @@ for (const name of names) {
         assert(hit.upperOwns && hit.lowerOwns, `Overlap hit regions: ${JSON.stringify(hit)}`);
         await page.mouse.move(hit.x,hit.lower);
         await page.mouse.down();
-        await page.waitForFunction(i => __tsubasaEffects.surfaces[i].contact?.down===true,index);
+        if(index>0)await page.waitForFunction(i => __tsubasaEffects.surfaces[i].contact?.down===true,index);
         await page.mouse.up();
         if (hit.streetPointer) {
           await page.mouse.click(hit.x,hit.upper);

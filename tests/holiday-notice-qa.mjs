@@ -27,7 +27,7 @@ try {
     assert.match(await notice.innerText(), /9月21日（月）[\s\S]*営業します[\s\S]*9月24日（木）[\s\S]*振替休業/);
     const layout = await page.evaluate(() => {
       const n = document.querySelector("#holiday-notice"), r = n.getBoundingClientRect();
-      const overlap = [...document.querySelectorAll("#videoTop .hero-copy h1, #videoTop .top-logo, #openCmPreview")]
+      const overlap = [...document.querySelectorAll("#top .hero-copy h1, #top .hero-logo, #top .crossing-next, #openCmPreview")]
         .filter(e => { const b=e.getBoundingClientRect(); return r.left<b.right && r.right>b.left && r.top<b.bottom && r.bottom>b.top; })
         .map(e => e.className || e.tagName);
       return { box:r.toJSON(), overlap, fits:r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight,

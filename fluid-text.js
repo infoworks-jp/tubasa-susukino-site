@@ -23,7 +23,7 @@ const commonScene=async(stage)=>{
   texture.colorSpace=SRGBColorSpace;texture.minFilter=LinearFilter;texture.magFilter=LinearFilter;
   const material=new MeshBasicMaterial({map:texture,toneMapped:false}),mesh=new Mesh(new PlaneGeometry(1,1),material);
   scene.add(mesh);
-  const fit=()=>{const image=texture.image,imageAspect=(image?.naturalWidth||image?.width||1)/(image?.naturalHeight||image?.height||1),viewHeight=2*Z*Math.tan((FOV*Math.PI)/360),viewWidth=viewHeight*camera.aspect,viewAspect=viewWidth/viewHeight;let width=viewWidth,height=viewHeight;if(imageAspect>viewAspect)width=viewHeight*imageAspect;else height=viewWidth/imageAspect;mesh.scale.set(width,height,1);const focus=stage===topStage&&!mobile?.72:.5;mesh.position.y=Math.max(0,height-viewHeight)*(focus-.5)};
+  const fit=()=>{const image=texture.image,imageAspect=(image?.naturalWidth||image?.width||1)/(image?.naturalHeight||image?.height||1),viewHeight=2*Z*Math.tan((FOV*Math.PI)/360),viewWidth=viewHeight*camera.aspect,viewAspect=viewWidth/viewHeight;let width=viewWidth,height=viewHeight;if(imageAspect>viewAspect)width=viewHeight*imageAspect;else height=viewWidth/imageAspect;mesh.scale.set(width,height,1);const focus=stage===topStage?.72:.5;mesh.position.y=Math.max(0,height-viewHeight)*(focus-.5)};
   return{scene,camera,texture,material,mesh,fit};
 };
 const mountCanvas=(stage,renderer)=>{const canvas=renderer.domElement;canvas.className='fluid-text-canvas';if(stage===topStage)canvas.id='fluidTextCanvas';Object.assign(canvas.style,{position:'absolute',inset:'0',width:'100%',height:'100%',touchAction:'pan-y'});stage.appendChild(canvas);return canvas};

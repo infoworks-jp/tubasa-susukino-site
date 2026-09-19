@@ -4,10 +4,11 @@ html.boundary-blend #top {
   z-index: 5;
   background: transparent;
 }
-html.boundary-blend #signature,
+html.boundary-blend #videoTop,
 html.boundary-blend .signature-tsubasa {
   margin-top: calc(-1 * var(--boundary-overlap));
 }
+html.boundary-blend #videoTop { z-index: 4; }
 html.boundary-blend #signature { z-index: 4; background: transparent; }
 html.boundary-blend .signature-butter-corn { z-index: 3; background: transparent; }
 /* Keep miso and butter-corn at their original distance. Only their images

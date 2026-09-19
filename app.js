@@ -69,13 +69,19 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
   const topVideo=videoTop?.querySelector('video');
   if(topVideo){
     topVideo.muted=true;
+    let visible=false;
+    const motion=matchMedia('(prefers-reduced-motion:reduce)');
     const loadVideo=()=>{
       if(topVideo.dataset.loaded)return;
       topVideo.querySelectorAll('source[data-src]').forEach(source=>{source.src=source.dataset.src});
       topVideo.dataset.loaded='1';
       topVideo.load();
     };
-    const startVideo=()=>topVideo.play().catch(()=>{});
+    const startVideo=()=>{
+      if(!visible || document.hidden || motion.matches){topVideo.pause();return;}
+      loadVideo();
+      topVideo.play().catch(()=>{});
+    };
     const startAtFirstVisibleFrame=()=>{
       if(!topVideo.dataset.startPosition){
         topVideo.currentTime=Math.min(1.5,Math.max(0,topVideo.duration||1.5));
@@ -85,10 +91,14 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
     };
     topVideo.addEventListener('loadedmetadata',startAtFirstVisibleFrame,{once:true});
     topVideo.addEventListener('playing',()=>videoTop.classList.add('video-ready'),{once:true});
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)startVideo()});
-    const scheduleVideo=()=>('requestIdleCallback'in window?requestIdleCallback(loadVideo,{timeout:1800}):setTimeout(loadVideo,900));
-    if(document.readyState==='complete')scheduleVideo();
-    else addEventListener('load',scheduleVideo,{once:true});
+    document.addEventListener('visibilitychange',startVideo);
+    motion.addEventListener('change',startVideo);
+    if('IntersectionObserver'in window){
+      new IntersectionObserver(([entry])=>{
+        visible=entry.isIntersecting && entry.intersectionRatio>.30;
+        startVideo();
+      },{threshold:[0,.30,.5]}).observe(videoTop);
+    }else{visible=true;startVideo();}
   }
   if(header&&videoTop&&'IntersectionObserver'in window)new IntersectionObserver(([entry])=>header.classList.toggle('video-hero-active',entry.isIntersecting),{threshold:.08}).observe(videoTop);
 })();
