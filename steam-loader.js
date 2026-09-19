@@ -5,6 +5,6 @@
   root.classList.toggle("phone-steam-preview", phone);
   root.dataset.phoneSteamImpact = "dynamic";
   const script = document.createElement("script");
-  script.src = "effects.js?v=mobile-impact-20260920-1";
+  script.src = "effects.js?v=bold-steam-20260920-2";
   document.body.appendChild(script);
 })();

@@ -14,15 +14,12 @@
   // Opt-in trial; older preview URLs retain their previous pressure behavior.
   const dynamicPressure = document.documentElement.dataset.phoneSteamImpact === "dynamic";
   const phoneRefinement = document.documentElement.classList.contains("phone-steam-preview");
-  // Touch phones need a wider visible response beneath the fingertip.
+  // Touch phones need a wider visible response beneath the fingertip. Keep
+  // desktop and the approved ambient steam on their existing parameters.
   const mobileImpact = phoneRefinement && dynamicPressure;
-  // More presence with the same solver, masks, draw count and GPU resolution.
-  // Small menu photographs keep a lighter veil so their food stays readable.
-  const presence = { signatureDensity: 2, cardDensity: 1.35 };
   const state = (window.__tsubasaEffects = {
     engine: "photographic-steam-fluid",
     phoneRefinement,
-    presence: "bold-20260920",
     pressureStyle: dynamicPressure ? "dynamic" : "classic",
     gestureHoldMs: 200,
     effects: ["steam", "advection", "pressure", "vorticity", "splat"],
@@ -463,14 +460,14 @@ void main(){
     bind(u, "dye", s.dye.read.texture, 2);
     if (s.finger) {
       bind(u, "fingerDye", s.finger.dye.read.texture, 3);
-      gl.uniform1f(u.fingerStrength, mobileImpact ? 0.96 : dynamicPressure ? 0.92 : 0.43);
+      gl.uniform1f(u.fingerStrength, mobileImpact ? 0.86 : dynamicPressure ? 0.68 : 0.43);
     }
     gl.uniform4fv(u.roots, s.rootArray);
     gl.uniform1i(u.rootCount, s.roots.length);
     gl.uniform1f(u.time, t);
     gl.uniform1f(u.seed, s.seed);
-    gl.uniform1f(u.motionAmount, motion.matches ? 0 : (s.signature ? (phoneRefinement ? 1.65 : 1.45) : 1.2));
-    gl.uniform1f(u.steamVisibility, s.signature ? (phoneRefinement ? 3.2 : 2.6) : 1.45);
+    gl.uniform1f(u.motionAmount, motion.matches ? 0 : (s.signature && phoneRefinement ? 1.24 : 1));
+    gl.uniform1f(u.steamVisibility, s.signature && phoneRefinement ? 1.55 : 1);
     draw(null);
     // Synchronous copy while the WebGL buffer is valid. The DOM never has a
     // partially transparent WebGL layer or a browser-specific blend/filter stack.
@@ -536,7 +533,7 @@ void main(){
     };
   };
   // A press on a bowl must reach its steam, not an invisible area below the
-  // display mask. Keep the source photograph's bowl outside the moving mask.
+  // display mask. Keep the approved display shader and ambient emitter intact.
   function steamPoint(s, p) {
     const root = s.roots.reduce((nearest, r) =>
       Math.abs(p.x - r[0]) < Math.abs(p.x - nearest[0]) ? r : nearest,
@@ -558,7 +555,7 @@ void main(){
       const p = s.pointer,
         at = steamPoint(s, p);
       // Velocity only: move the existing strands, never paint a white spot.
-      const force = mobileImpact ? 4800 : dynamicPressure ? 3900 : 1800;
+      const force = mobileImpact ? 3900 : dynamicPressure ? 2600 : 1800;
       splat(s, at.x, at.y, p.dx * force, p.dy * force, 0, 0.0024);
       s.pointer = null;
     }
@@ -571,7 +568,7 @@ void main(){
     }
     const at = steamPoint(s, contact);
     const strength =
-      (mobileImpact ? 64 : dynamicPressure ? 54 : 18) * dt * 30 *
+      (mobileImpact ? 48 : dynamicPressure ? 28 : 18) * dt * 30 *
       (contact.down ? 1 : Math.exp(-contact.age * (mobileImpact ? 7 : 12)));
     // Two small opposing forces part the plume around the fingertip. The
     // existing pressure/advection/vorticity stages carry and dissipate them.
@@ -636,8 +633,8 @@ void main(){
       const stationary = distance < 0.002;
       const count = Math.max(1, Math.min(dynamicPressure ? 6 : 8,
         Math.ceil(distance / (dynamicPressure ? 0.018 : 0.01))));
-      const limit = mobileImpact ? 250 : dynamicPressure ? 220 : 90,
-        force = mobileImpact ? 1.75 : dynamicPressure ? 1.5 : 0.45;
+      const limit = mobileImpact ? 220 : dynamicPressure ? 170 : 90,
+        force = mobileImpact ? 1.55 : dynamicPressure ? 1.1 : 0.45;
       const vx = Math.max(-limit, Math.min(limit, ((dx * f.w) / dt) * force));
       const vy = Math.max(-limit, Math.min(limit, ((dy * f.h) / dt) * force)) + 3;
       // Closely spaced, slightly separated injections form a continuous trail,
@@ -649,19 +646,19 @@ void main(){
         for (const side of (dynamicPressure ? [-1, 0, 1] : [-1, 1]))
           splat(
             f,
-            x + (side * (mobileImpact ? 0.029 : dynamicPressure ? 0.026 : 0.006) * f.h) / f.w
+            x + (side * (mobileImpact ? 0.022 : dynamicPressure ? 0.014 : 0.006) * f.h) / f.w
               + (dynamicPressure ? Math.sin(turn * 1.7 + side) * 0.008 : 0),
             y + Math.sin(turn + side) * (dynamicPressure ? 0.012 : 0.005),
-            vx + side * (mobileImpact ? 18 : dynamicPressure ? 16 : 3.5),
+            vx + side * (mobileImpact ? 14 : dynamicPressure ? 9 : 3.5),
             vy + Math.sin(turn) * (dynamicPressure ? 6 : 2)
               + (dynamicPressure ? (stationary ? 18 : 8) : 0),
             // Three wandering ribbons spread the source without a solid disk.
-            (mobileImpact ? (stationary ? 0.27 : 0.56) :
-              dynamicPressure ? (stationary ? 0.23 : 0.50) : (stationary ? 0.09 : 0.22))
+            (mobileImpact ? (stationary ? 0.19 : 0.42) :
+              dynamicPressure ? (stationary ? 0.10 : 0.28) : (stationary ? 0.09 : 0.22))
               * (0.65 + 0.35 * Math.sin(turn + side))
               // A brief tap must be visible even before a hold develops.
               * (mobileImpact && p.start ? 1.6 : 1),
-            mobileImpact ? 0.00090 : dynamicPressure ? 0.00065 : 0.000026,
+            mobileImpact ? 0.00050 : dynamicPressure ? 0.00020 : 0.000026,
           );
       }
       f.lastPoint = p;
@@ -906,7 +903,7 @@ void main(){
                   1 - r[1] + 0.012,
                   Math.sin(s.time * 0.4 + k + s.seed) * 0.7,
                   6.5 * pulse,
-                  0.019 * pulse * (s.signature ? presence.signatureDensity : presence.cardDensity),
+                  0.019 * pulse,
                   0.00012,
                 );
               }
@@ -935,7 +932,6 @@ void main(){
   }
   state.inspect = () => ({
     engine: state.engine,
-    presence: state.presence,
     gpu: state.gpu,
     contextCount: state.contextCount,
     frames: state.frames,

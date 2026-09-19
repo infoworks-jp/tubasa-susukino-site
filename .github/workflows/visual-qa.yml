@@ -130,10 +130,15 @@ jobs:
             if(name==='desktop'&&box){
               const y=box.y+box.height*.52;
               await page.mouse.move(box.x+box.width*.25,y);
+              // Upstream only injects while the pointer is held down.
+              await page.mouse.down();
               await page.mouse.move(box.x+box.width*.75,y-80,{steps:24});
               await page.mouse.move(box.x+box.width*.45,y+70,{steps:18});
               await page.waitForTimeout(350);
               await page.screenshot({path:`reference-evidence/${name}-pointer.png`});
+              await page.mouse.up();
+              await page.waitForTimeout(500);
+              await page.screenshot({path:`reference-evidence/${name}-release.png`});
               pointerDiff=diff(`reference-evidence/${name}-t3.png`,`reference-evidence/${name}-pointer.png`,`reference-evidence/${name}-diff-pointer.png`);
               if(pointerDiff<1000)errors.push(`upstream-pointer-response-too-low:${pointerDiff}`);
             }

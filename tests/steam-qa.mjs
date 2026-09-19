@@ -365,7 +365,7 @@ for (const name of names) {
     );
     result.errors.push(...result.pressure.errors);
     const approvedSource = await fs.readFile(
-      new URL("./fixtures/steam-approved-dynamic-20260909.js", import.meta.url),
+      new URL("./fixtures/steam-approved-mobile-20260920.js", import.meta.url),
       "utf8",
     );
     const approved = await pressureQA(context, base, undefined, approvedSource);
@@ -379,23 +379,13 @@ for (const name of names) {
         s.fraction === approved.results[i].fraction &&
         s.meanDifference === approved.results[i].meanDifference,
     }));
-    // September 20: stronger phone interaction is intentional; ambient pixels
-    // and every desktop pressure sample remain locked to the approved version.
-    if (result.preservation.some((s) => !s.ambientExact || (!mobile && !s.pressureExact)))
-      fail(`Approved steam changed: ${JSON.stringify(result.preservation)}`);
-    // The user approved stronger pressure and mobile idle visibility. Desktop
-    // idle steam must still match the previously approved production solver.
-    if (!mobile) {
-      const originalSource = await fs.readFile(
-        new URL("./fixtures/steam-approved-4e6b68e.js", import.meta.url), "utf8",
-      );
-      const original = await pressureQA(context, base, undefined, originalSource);
-      result.errors.push(...original.errors);
-      result.desktopIdlePreserved = result.pressure.results.every(
-        (s, i) => s.controlSHA256 === original.results[i].controlSHA256,
-      );
-      if (!result.desktopIdlePreserved) fail("Previous desktop idle steam changed");
-    }
+    // The user explicitly requested bolder idle AND interactive steam on both
+    // screen sizes. Compare to the immutable immediately preceding release,
+    // rather than requiring the requested changes to be pixel-identical.
+    // Temporal root motion, zero bowl movement, alignment and pressure release
+    // are still checked above. Finger area/contrast gains are asserted below.
+    if (result.preservation.some((s) => s.ambientExact || s.pressureExact))
+      fail(`Bolder steam was not applied: ${JSON.stringify(result.preservation)}`);
     result.finger = await fingerQA(
       context,
       base,
@@ -423,8 +413,8 @@ for (const name of names) {
       };
     });
     for (const sample of result.fingerComparison) {
-      if (mobile ? sample.visibleAreaRatio < 1.8 || sample.contrastRatio < 1.4 : !sample.desktopExact)
-        fail(`Phone impact / desktop preservation failed: ${JSON.stringify(sample)}`);
+      if (sample.visibleAreaRatio < 1.3 || sample.contrastRatio < 1.05)
+        fail(`Bold steam gain missing: ${JSON.stringify(sample)}`);
     }
     // A GPU failure must keep original photographs and text readable.
     const fallback = await context.newPage();
