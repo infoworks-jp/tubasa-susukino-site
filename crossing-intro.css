@@ -1,6 +1,6 @@
 /* The approved street photograph, now the opening scene on every device. */
 #top .hero-bg { object-fit: cover !important; object-position: 50% 72% !important; }
-#top .hero-copy { z-index: 10; }
+#top .hero-copy { z-index: 10; opacity: 1; }
 #top .hero-copy h1 { color: inherit; }
 #top .hero-copy em { color: inherit; }
 #top .hero-copy p { color: inherit; }

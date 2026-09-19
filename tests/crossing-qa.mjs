@@ -48,6 +48,9 @@ for(const name of cases){
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.screenshot({path:`${output}/${name}-photo.png`});
   await page.clock.resume();
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator('.site-header nav a[href="#menu"]').isVisible(),true,
+    'The overlapping video must not hide navigation over the street hero');
   await page.locator('.crossing-next').click();
   await page.waitForFunction(()=>!document.querySelector('#videoTop video').paused);
   assert.equal(await page.locator('#videoTop video').evaluate(v=>v.muted),true);
@@ -70,6 +73,7 @@ for(const name of cases){
   const plain=await browser.newContext({viewport:{width,height},javaScriptEnabled:false});
   const fallback=await plain.newPage(); await fallback.goto(base,{waitUntil:'load'});
   assert.equal(await fallback.locator('#top .hero-bg').isVisible(),true);
+  assert.equal(await fallback.locator('#top .hero-copy').evaluate(e=>getComputedStyle(e).opacity),'1');
   assert.equal(await fallback.locator('.crossing-dots').count(),0);
   assert.equal(await fallback.locator('html').getAttribute('class'),null);
   result.noJs=true; await plain.close();

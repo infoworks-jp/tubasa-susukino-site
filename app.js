@@ -96,9 +96,9 @@ window.__tsubasaMenu={source:'2026 product master + official menu sheets',itemCo
     if('IntersectionObserver'in window){
       new IntersectionObserver(([entry])=>{
         visible=entry.isIntersecting && entry.intersectionRatio>.30;
+        header?.classList.toggle('video-hero-active',visible);
         startVideo();
       },{threshold:[0,.30,.5]}).observe(videoTop);
     }else{visible=true;startVideo();}
   }
-  if(header&&videoTop&&'IntersectionObserver'in window)new IntersectionObserver(([entry])=>header.classList.toggle('video-hero-active',entry.isIntersecting),{threshold:.08}).observe(videoTop);
 })();
