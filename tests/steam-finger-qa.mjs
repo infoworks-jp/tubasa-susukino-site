@@ -6,6 +6,7 @@ export async function fingerQA(
   base,
   saveShot = async () => {},
   touch = false,
+  sourceOverride,
 ) {
   const page = await context.newPage(),
     errors = [],
@@ -13,7 +14,7 @@ export async function fingerQA(
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route(/\/effects\.js(?:\?|$)/, async (route) => {
     const response = await route.fetch();
-    let source = await response.text();
+    let source = sourceOverride || await response.text();
     const schedule = "if (!raf && !hidden) raf = requestAnimationFrame(tick);";
     if (!source.includes(schedule))
       throw Error("Finger QA scheduling hook missing");

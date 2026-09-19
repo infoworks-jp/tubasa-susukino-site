@@ -379,7 +379,9 @@ for (const name of names) {
         s.fraction === approved.results[i].fraction &&
         s.meanDifference === approved.results[i].meanDifference,
     }));
-    if (result.preservation.some((s) => !s.ambientExact || !s.pressureExact))
+    // September 20: stronger phone interaction is intentional; ambient pixels
+    // and every desktop pressure sample remain locked to the approved version.
+    if (result.preservation.some((s) => !s.ambientExact || (!mobile && !s.pressureExact)))
       fail(`Approved steam changed: ${JSON.stringify(result.preservation)}`);
     // The user approved stronger pressure and mobile idle visibility. Desktop
     // idle steam must still match the previously approved production solver.
@@ -409,6 +411,21 @@ for (const name of names) {
       mobile,
     );
     result.errors.push(...result.finger.errors);
+    const approvedFinger = await fingerQA(context, base, undefined, mobile, approvedSource);
+    result.errors.push(...approvedFinger.errors);
+    result.fingerComparison = result.finger.results.filter(s => s.hold).map((s, i) => {
+      const previous = approvedFinger.results[i];
+      return {
+        profile: s.profile, rootIndex: s.rootIndex,
+        visibleAreaRatio: s.hold.pixels.changed / previous.hold.pixels.changed,
+        contrastRatio: s.hold.pixels.max / previous.hold.pixels.max,
+        desktopExact: JSON.stringify(s.hold) === JSON.stringify(previous.hold),
+      };
+    });
+    for (const sample of result.fingerComparison) {
+      if (mobile ? sample.visibleAreaRatio < 1.8 || sample.contrastRatio < 1.4 : !sample.desktopExact)
+        fail(`Phone impact / desktop preservation failed: ${JSON.stringify(sample)}`);
+    }
     // A GPU failure must keep original photographs and text readable.
     const fallback = await context.newPage();
     await fallback.addInitScript(() => {
