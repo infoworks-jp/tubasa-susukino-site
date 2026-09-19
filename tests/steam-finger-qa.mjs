@@ -244,7 +244,11 @@ export async function fingerQA(
       }
       results.push(sample);
     }
-    if (touch && context.browser().browserType().name() === "chromium") {
+    // The frozen source is only a deterministic visual reference. Native
+    // gesture/lifecycle checks belong to the current implementation; replaying
+    // old input code under software-GPU scheduling can fail independently of
+    // the new code (while that code's native checks have already passed).
+    if (touch && !sourceOverride && context.browser().browserType().name() === "chromium") {
       // Mouse emulation alone misses native gesture cancellation. Exercise real
       // browser touch input: horizontal vapor trails AND ordinary vertical scroll.
       await page.evaluate(() =>
