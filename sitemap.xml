@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.tubasa-susukino.com/</loc><lastmod>2026-09-17</lastmod></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url><loc>https://www.tubasa-susukino.com/</loc><lastmod>2026-09-20</lastmod><image:image><image:loc>https://www.tubasa-susukino.com/assets/ultimate-miso.webp</image:loc></image:image></url>
+  <url><loc>https://www.tubasa-susukino.com/menu/</loc><lastmod>2026-09-20</lastmod><image:image><image:loc>https://www.tubasa-susukino.com/assets/ultimate-miso.webp</image:loc></image:image></url>
+  <url><loc>https://www.tubasa-susukino.com/en/</loc><lastmod>2026-09-20</lastmod><image:image><image:loc>https://www.tubasa-susukino.com/assets/ultimate-miso.webp</image:loc></image:image></url>
+  <url><loc>https://www.tubasa-susukino.com/zh-hans/</loc><lastmod>2026-09-20</lastmod><image:image><image:loc>https://www.tubasa-susukino.com/assets/ultimate-miso.webp</image:loc></image:image></url>
+  <url><loc>https://www.tubasa-susukino.com/ko/</loc><lastmod>2026-09-20</lastmod><image:image><image:loc>https://www.tubasa-susukino.com/assets/ultimate-miso.webp</image:loc></image:image></url>
+  <url><loc>https://www.tubasa-susukino.com/ramen/</loc><lastmod>2026-09-20</lastmod><image:image><image:loc>https://www.tubasa-susukino.com/assets/ultimate-miso.webp</image:loc></image:image></url>
+  <url><loc>https://www.tubasa-susukino.com/access/</loc><lastmod>2026-09-20</lastmod><image:image><image:loc>https://www.tubasa-susukino.com/assets/store-interior.webp</image:loc></image:image></url>
 </urlset>

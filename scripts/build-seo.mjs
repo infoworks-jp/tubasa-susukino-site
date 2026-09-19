@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { buildPages, homeDirectory } from './seo-pages.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const check = process.argv.includes('--check');
@@ -71,7 +72,7 @@ const schema = {
       servesCuisine: ['ラーメン', '味噌ラーメン'],
       image: ['assets/ultimate-miso.webp', 'assets/butter-corn.webp', 'assets/tsubasa-ramen.webp'].map(absolute),
       logo: absolute('assets/tsubasa-logo.png'),
-      hasMenu: config.url + '#menu',
+      hasMenu: absolute('menu/'),
       openingHoursSpecification: config.openingHoursSpecification,
       specialOpeningHoursSpecification: config.specialOpeningHoursSpecification,
     },
@@ -104,12 +105,25 @@ for (const [lang, htmlLang] of Object.entries(languages)) {
   html = html.replace(pattern, '$1 lang="' + htmlLang + '" id="menu-panel-' + lang + '" role="tabpanel" aria-labelledby="menu-tab-' + lang + '" tabindex="0"' + (lang === 'ja' ? '' : ' hidden') + '><div class="menu-text-list" data-complete="40-item-master">\n' +
     rows + '\n</div>');
 }
+const directory = homeDirectory();
+if (html.includes('<!-- GUIDES:START')) {
+  html = html.replace(/<!-- GUIDES:START[\s\S]*?<!-- GUIDES:END -->/, directory);
+} else {
+  html = html.replace('</main>', directory + '\n</main>');
+}
+if (!html.includes('home-guides.css')) {
+  html = html.replace('</head>', '<link rel="stylesheet" href="home-guides.css?v=20260920-1">\n</head>');
+}
+const pages = buildPages(config, menu, schema['@graph'].find(n => n['@type'] === 'Restaurant'));
+const pagePaths = [...pages.keys()].map(p => p.replace(/index\.html$/, ''));
 const outputs = new Map([
   ['index.html', html],
+  ...pages,
   ['robots.txt', 'User-agent: *\nAllow: /\n\nSitemap: ' + config.url + 'sitemap.xml\n'],
   ['sitemap.xml', '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-    '  <url><loc>' + escape(config.url) + '</loc><lastmod>' + config.lastModified + '</lastmod></url>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n' +
+    ['', ...pagePaths].map(p => '  <url><loc>' + escape(absolute(p)) + '</loc><lastmod>' + config.lastModified + '</lastmod>' +
+      '<image:image><image:loc>' + absolute('assets/' + (p === 'access/' ? 'store-interior.webp' : 'ultimate-miso.webp')) + '</image:loc></image:image></url>').join('\n') + '\n' +
     '</urlset>\n'],
 ]);
 // Public engineering demos must not compete with the actual restaurant page.
@@ -135,9 +149,12 @@ for (const [filename, content] of outputs) {
   });
   if (current !== content) {
     if (check) stale.push(filename);
-    else await fs.writeFile(path.join(root, filename), content);
+    else {
+      await fs.mkdir(path.dirname(path.join(root, filename)), { recursive: true });
+      await fs.writeFile(path.join(root, filename), content);
+    }
   }
 }
 if (stale.length) throw new Error('SEO output is stale. Run npm run build:seo: ' + stale.join(', '));
 console.log((check ? 'Verified' : 'Generated') + ': metadata, Restaurant schema, ' +
-  Object.keys(menu).length + ' static menu languages, sitemap, robots and demo noindex.');
+  Object.keys(menu).length + ' static menu languages, ' + pages.size + ' search entry pages, sitemap, robots and demo noindex.');

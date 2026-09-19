@@ -222,6 +222,20 @@ jobs:
           path: output/steam-qa
           retention-days: 30
 
+      - name: Verify crawlable guide pages on desktop and mobile
+        if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
+        env:
+          STEAM_QA_URL: http://127.0.0.1:4174/
+          SEO_QA_CASES: ${{ startsWith(matrix.browser-case, 'webkit') && 'phone' || 'desktop,small,nojs' }}
+          SEO_QA_OUTPUT: output/seo-guides
+        run: node tests/seo-browser-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always() && (matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390')
+        with:
+          name: seo-guides-${{ github.sha }}-${{ matrix.browser-case }}
+          path: output/seo-guides
+          retention-days: 30
+
   phone-input:
     name: 3b. Native phone input / ${{ matrix.touch-case }}
     needs: contract

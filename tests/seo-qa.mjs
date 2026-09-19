@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { locales, editorial } from '../scripts/seo-content.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => fs.readFile(path.join(root, file), 'utf8');
@@ -31,7 +32,7 @@ assert.equal(ld['@graph'].length, 3);
 const restaurant = ld['@graph'].find(item => item['@type'] === 'Restaurant');
 assert.equal(restaurant.name, config.name);
 assert.equal(restaurant.url, config.url);
-assert.equal(restaurant.hasMenu, config.url + '#menu');
+assert.equal(restaurant.hasMenu, config.url + 'menu/');
 assert(body.includes('id="menu"'));
 assert(body.includes('tel:0115215963'));
 assert.equal(restaurant.telephone.replace(/\D/g, '').replace(/^81/, '0'), '0115215963');
@@ -83,7 +84,7 @@ const robots = await read('robots.txt');
 assert.equal(robots, 'User-agent: *\nAllow: /\n\nSitemap: ' + config.url + 'sitemap.xml\n');
 const sitemap = await read('sitemap.xml');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-assert.deepEqual(urls, [config.url]);
+assert.deepEqual(urls, [config.url, ...Object.values(locales).map(l=>config.url+l.path), ...editorial.map(p=>config.url+p.path)]);
 assert(sitemap.includes('<lastmod>' + config.lastModified + '</lastmod>'));
 assert(/^\d{4}-\d{2}-\d{2}$/.test(config.lastModified));
 for (const directory of ['reference', 'steam-lab', 'steam-lab-live', 'progress']) {
@@ -93,3 +94,44 @@ for (const directory of ['reference', 'steam-lab', 'steam-lab-live', 'progress']
   }
 }
 console.log('SEO PASS: canonical, metadata, Restaurant schema, hours/holiday dates, 160 static menu rows, assets, sitemap and demo noindex.');
+
+const titles=new Set([config.title]), descriptions=new Set([config.description]);
+for (const page of [...Object.values(locales), ...editorial]) {
+  const text=await read(page.path+'index.html');
+  const pageHead=text.split('</head>')[0], pageBody=text.split('</head>')[1];
+  assert.equal((pageHead.match(/rel="canonical"/g)||[]).length,1);
+  assert(pageHead.includes('rel="canonical" href="'+config.url+page.path+'"'));
+  assert(!pageHead.includes('noindex'));
+  assert(!pageHead.includes('name="keywords"'));
+  assert(!titles.has(page.title));titles.add(page.title);
+  assert(!descriptions.has(page.description));descriptions.add(page.description);
+  assert.equal((pageBody.match(/<h1>/g)||[]).length,1);
+  assert(pageBody.includes('href="tel:+81115215963"'));
+  assert(pageBody.includes('id="visit"'));
+  assert(pageBody.includes('data-expires="2026-09-25T00:00:00+09:00" hidden'));
+  const graph=JSON.parse(pageHead.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])['@graph'];
+  assert.deepEqual(graph.find(n=>n['@type']==='Restaurant'),restaurant,'Business facts must stay identical: '+page.path);
+  const crumbs=graph.find(n=>n['@type']==='BreadcrumbList');
+  assert.equal(crumbs.itemListElement[1].item,config.url+page.path);
+  assert(!JSON.stringify(graph).match(/aggregateRating|reviewCount|FAQPage|SearchAction/));
+  const ids=[...pageBody.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
+  assert.equal(new Set(ids).size,ids.length,'Unique IDs: '+page.path);
+  for(const m of text.matchAll(/(?:href|src)="(\/[^"?#]*)(?:[?#][^"]*)?"/g)){
+    const target=m[1].endsWith('/')?m[1]+'index.html':m[1];
+    assert((await fs.stat(path.join(root,target))).isFile(),'Missing resource: '+target);
+  }
+  for(const m of text.matchAll(/href="#([^"]+)"/g))assert(ids.includes(m[1]),'Missing anchor '+m[1]);
+  const language=Object.keys(locales).find(k=>locales[k].path===page.path);
+  if(language){
+    assert(text.includes('<html lang="'+locales[language].lang+'"'));
+    assert.equal((pageHead.match(/hreflang=/g)||[]).length,5);
+    for(const l of Object.values(locales))assert(pageHead.includes('hreflang="'+l.lang+'" href="'+config.url+l.path+'"'));
+    const rows=[...pageBody.matchAll(/<div class="guide-menu-row"><dt>([^<]+)<\/dt><dd>([^<]+)<\/dd>/g)];
+    assert.deepEqual(rows.map(m=>[m[1],m[2]]),JSON.parse(JSON.stringify(menu[language])));
+    const schemaMenu=graph.find(n=>n['@type']==='Menu');
+    assert.equal(schemaMenu.hasMenuSection.flatMap(s=>s.hasMenuItem).length,40);
+    assert.deepEqual(schemaMenu.hasMenuSection.flatMap(s=>s.hasMenuItem).map(i=>i.offers.price),Array.from(menu[language],([,p])=>p.replace(/[^0-9]/g,'')));
+  } else assert(!pageHead.includes('hreflang='),'Only actual translated equivalents get hreflang');
+  assert(body.includes('href="/'+page.path+'"'),'Crawlable home link: '+page.path);
+}
+console.log('SEO EXPANSION PASS: 7 canonical URLs; distinct metadata; reciprocal hreflang; 160 translated rows and Menu offers; shared hours; links, IDs and breadcrumbs.');
