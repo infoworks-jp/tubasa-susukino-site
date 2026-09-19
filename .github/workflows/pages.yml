@@ -15,10 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  runtime-assets:
+    uses: ./.github/workflows/localize-runtime-assets.yml
   steam-qa:
     uses: ./.github/workflows/visual-qa.yml
   deploy:
-    needs: steam-qa
+    needs: [steam-qa, runtime-assets]
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

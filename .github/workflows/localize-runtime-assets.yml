@@ -1,39 +1,29 @@
-name: Localize runtime assets
+name: Verify runtime assets
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/localize-runtime-assets.yml'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'fluid-text.js'
+  workflow_call:
   workflow_dispatch:
 
+# Asset verification must never write the repository or deploy independently.
+# All publishing goes through pages.yml after both release gates pass.
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 jobs:
-  localize:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Copy videos into the current repository
-        run: |
-          set -euo pipefail
-          mkdir -p assets/video
-          base='https://raw.githubusercontent.com/infoworks-jp/subasa-new-official/main/assets/video'
-          curl -fL --retry 5 "$base/tsubasa-cm-vertical.mp4" -o assets/video/tsubasa-cm-vertical.mp4
-          curl -fL --retry 5 "$base/tsubasa-top-mobile.mp4" -o assets/video/tsubasa-top-mobile.mp4
-          curl -fL --retry 5 "$base/tsubasa-top-pc.mp4" -o assets/video/tsubasa-top-pc.mp4
-      - name: Bundle fluid runtime
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify the committed bundle matches its source
         run: |
           npm ci --ignore-scripts
           npm run build:fluid
-      - name: Verify localized runtime
+          git diff --exit-code -- vendor/fluid-text.bundle.js
+      - name: Verify committed local media
         run: |
           set -euo pipefail
           test -s assets/video/tsubasa-cm-vertical.mp4
@@ -41,21 +31,3 @@ jobs:
           test -s assets/video/tsubasa-top-pc.mp4
           test -s vendor/fluid-text.bundle.js
           ! grep -R 'esm.sh\|infoworks-jp.github.io/subasa-new-official' index.html app.js vendor/fluid-text.bundle.js
-      - name: Save localized files
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/video vendor/fluid-text.bundle.js
-          if git diff --cached --quiet; then
-            echo 'Runtime assets are already localized.'
-          else
-            git commit -m 'Localize videos and fluid runtime'
-            git push
-          fi
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-      - name: Deploy localized site
-        uses: actions/deploy-pages@v4
