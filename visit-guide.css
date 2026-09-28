@@ -4,7 +4,7 @@
 .tsubasa-guide-dialog::backdrop{background:#0905058c}
 .tsubasa-guide-head{display:flex;justify-content:space-between;gap:12px;background:#240f0e;color:#fff4e5;padding:18px 20px}
 .tsubasa-guide-head small{color:#e8b779;font:700 11px/1.4 system-ui,sans-serif;letter-spacing:.13em}
-.tsubasa-guide-head h2{margin:4px 0 0;color:inherit;font:600 23px/1.4 'Yu Mincho','Hiragino Mincho ProN',serif}
+.tsubasa-guide-head h2{margin:4px 0 0;padding:0;color:inherit;font:600 23px/1.4 'Yu Mincho','Hiragino Mincho ProN',serif}
 .tsubasa-guide-close{border:0;background:transparent;color:inherit;min-width:44px;min-height:44px;font-size:27px;cursor:pointer}
 .tsubasa-guide-body{padding:18px 20px 20px}
 .tsubasa-guide-note{font-size:13px;margin:0 0 16px;color:#574b42}

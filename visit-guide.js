@@ -59,6 +59,10 @@
       ]
     }
   }[locale];
+  if (locale !== 'ja') {
+    copy.topics[1][2] = '#visit';
+    copy.topics[2][2] = '#visit';
+  }
   const terms = [
     /おすすめ|人気|味噌|ラーメン|いくら|menu|ramen|miso|popular|招牌|推荐|拉面|메뉴|라멘|추천|미소/i,
     /営業|時間|休み|定休|何時|hour|open|close|when|营业|几点|休息|영업|휴무|몇 시/i,
