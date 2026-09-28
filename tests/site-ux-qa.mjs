@@ -65,7 +65,9 @@ try {
       // Test both labels without changing the actual sound implementation.
       const sound = page.locator('#sound-toggle');
       for (let i=0; i<2; i++) {
-        assert((await sound.getAttribute('aria-label')).includes(await sound.innerText()));
+        const visibleLabel = (await sound.locator('span').textContent()).trim();
+        const accessibleLabel = await sound.getAttribute('aria-label');
+        assert(accessibleLabel.includes(visibleLabel), JSON.stringify({accessibleLabel, visibleLabel}));
         await sound.click();
         await page.waitForFunction(previous => document.querySelector('#sound-toggle').getAttribute('aria-pressed') !== previous, i===0 ? 'false' : 'true');
       }
