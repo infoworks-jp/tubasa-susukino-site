@@ -47,7 +47,7 @@ ${translated?alternate:''}
 <div class="guide-breadcrumb" aria-label="Breadcrumb"><a href="/">${e(l.home)}</a><span aria-hidden="true"> / </span><span>${e(p.sub)}</span></div>
 ${langLinks(p.path)}${body}
 <section class="guide-section guide-return"><h2 lang="ja">味一番つばさ</h2><p>${e(l.footer)}</p><a class="guide-button" href="/">${e(l.home)} →</a>${l.lang==='ja'?'<p><a href="/ramen/">つばさのラーメンを知る</a> ／ <a href="/menu/">メニュー・値段</a> ／ <a href="/access/">営業時間・アクセス</a></p>':''}</section></main>
-<footer class="guide-footer"><span>© 2026 AJIICHIBAN TSUBASA</span><a href="tel:+81115215963">011-521-5963</a></footer><script defer src="/visit-guide.js?v=20260929-2"></script></body></html>\n`;
+<footer class="guide-footer"><span>© 2026 AJIICHIBAN TSUBASA</span><a href="tel:+81115215963">011-521-5963</a></footer><script defer src="/visit-guide.js?v=20260929-2"></script><script src="/portfolio-return.js?v=1" defer></script></body></html>\n`;
   };
   const outputs=new Map();
   for(const [lang,l] of Object.entries(locales)) {
