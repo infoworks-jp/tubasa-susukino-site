@@ -39,7 +39,7 @@ ${translated?alternate:''}
 <meta property="og:image" content="${abs('assets/'+file)}"><meta property="og:image:alt" content="${e(file==='store-interior.webp'?'味一番つばさのカウンター':l.dishTitles[0])}">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${e(title)}"><meta name="twitter:description" content="${e(desc)}"><meta name="twitter:image" content="${abs('assets/'+file)}">
 <meta name="theme-color" content="#16090b"><link rel="icon" href="/favicon.ico?v=20260915-tsubasa">
-<link rel="stylesheet" href="/guide.css?v=20260920-1"><link rel="stylesheet" href="/visit-guide.css?v=20260929-2"><script defer src="/holiday-notice.js?v=20260909-1"></script>
+<link rel="stylesheet" href="/guide.css?v=20260920-1"><link rel="stylesheet" href="/visit-guide.css?v=20260929-3"><script defer src="/holiday-notice.js?v=20260909-1"></script>
 <script type="application/ld+json">${json({'@context':'https://schema.org','@graph':graph})}</script></head>
 <body class="tsubasa-guide"><a class="guide-skip" href="#content">${e(l.skip)}</a>
 <header class="guide-header"><a class="guide-brand" href="/"><span lang="ja">味一番つばさ</span><small>AJIICHIBAN TSUBASA</small></a><nav aria-label="${e(l.menu)}"><a href="/${l.path}#full-menu">${e(l.menu)}</a><a href="${l.lang==='ja'?'/access/':'#visit'}">${e(l.access)}</a></nav></header>

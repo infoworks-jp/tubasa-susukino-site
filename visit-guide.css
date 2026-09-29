@@ -1,10 +1,10 @@
 .tsubasa-guide-launch{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:900;border:1px solid #f4d6ac;border-radius:999px;background:#971d18;color:#fff;padding:12px 18px;box-shadow:0 10px 35px #0009;font:700 14px/1.4 system-ui,sans-serif;cursor:pointer}
 .tsubasa-guide-launch:hover{background:#ba2e25}
-.tsubasa-guide-dialog{position:fixed;inset:auto max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) auto;margin:0;width:min(430px,calc(100vw - 32px));max-height:min(690px,calc(100dvh - 32px));padding:0;border:1px solid #d3b386;border-radius:18px;background:#f7eee0;color:#221513;box-shadow:0 24px 70px #000b;overflow:auto;font:15px/1.65 system-ui,sans-serif;z-index:1100}
+.tsubasa-guide-dialog{position:fixed;inset:auto max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) auto;margin:0;width:min(430px,calc(100vw - 32px));max-height:min(690px,calc(100dvh - 32px));padding:0;border:1px solid #d3b386!important;border-radius:18px;background:#f7eee0!important;color:#221513;box-shadow:0 24px 70px #000b;overflow:auto;font:15px/1.65 system-ui,sans-serif;z-index:1100}
 .tsubasa-guide-dialog::backdrop{background:#0905058c}
 .tsubasa-guide-head{display:flex;justify-content:space-between;gap:12px;background:#240f0e;color:#fff4e5;padding:18px 20px}
 .tsubasa-guide-head small{color:#e8b779;font:700 11px/1.4 system-ui,sans-serif;letter-spacing:.13em}
-.tsubasa-guide-head h2{margin:4px 0 0;padding:0;color:inherit;font:600 23px/1.4 'Yu Mincho','Hiragino Mincho ProN',serif}
+.tsubasa-guide-head h2{margin:4px 0 0;padding:0!important;color:inherit;font:600 23px/1.4 'Yu Mincho','Hiragino Mincho ProN',serif!important}
 .tsubasa-guide-close{border:0;background:transparent;color:inherit;min-width:44px;min-height:44px;font-size:27px;cursor:pointer}
 .tsubasa-guide-body{padding:18px 20px 20px}
 .tsubasa-guide-note{font-size:13px;margin:0 0 16px;color:#574b42}
