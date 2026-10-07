@@ -1,4 +1,10 @@
 (() => {
+  if (document.documentElement.lang.toLowerCase().startsWith('ja')) {
+    import(new URL('./ai/tsubasa-entry.js', document.currentScript.src).href).catch(() => {
+      const a=document.createElement('a'); a.href='/access/'; a.className='tsubasa-guide-launch'; a.textContent='来店案内'; document.body.append(a);
+    });
+    return;
+  }
   const language = document.documentElement.lang.toLowerCase();
   const locale = language.startsWith('zh') ? 'zh' : language.startsWith('ko') ? 'ko' : language.startsWith('en') ? 'en' : 'ja';
   const copy = {
