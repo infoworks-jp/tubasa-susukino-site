@@ -4,7 +4,9 @@
   "scripts": {
     "build:seo": "node scripts/build-seo.mjs",
     "test:seo": "node scripts/build-seo.mjs --check && node tests/seo-qa.mjs",
-    "build:fluid": "esbuild fluid-text.js --bundle --format=esm --target=es2022 --minify --outfile=vendor/fluid-text.bundle.js"
+    "build:fluid": "esbuild fluid-text.js --bundle --format=esm --target=es2022 --minify --outfile=vendor/fluid-text.bundle.js",
+    "build:ai": "node scripts/build-ai-data.mjs",
+    "test:ai": "node scripts/build-ai-data.mjs --check && node tests/ai-chat-qa.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.9",
