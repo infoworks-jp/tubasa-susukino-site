@@ -92,7 +92,8 @@ export async function pressureQA(
         ({ index, rootIndex }) => {
           const s = __tsubasaEffects.surfaces[index],
             img = s.image;
-          scrollTo({ top: img.parentElement.offsetTop, behavior: "instant" });
+          const section = img.closest(".ramen-story") || img.parentElement;
+          scrollTo({ top: section.getBoundingClientRect().top + scrollY, behavior: "instant" });
           const r = img.getBoundingClientRect(),
             css = getComputedStyle(img);
           const pos = css.objectPosition

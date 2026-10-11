@@ -95,7 +95,8 @@ export async function fingerQA(
         ({ index, rootIndex }) => {
           const s = __tsubasaEffects.surfaces[index],
             img = s.image;
-          scrollTo({ top: img.parentElement.offsetTop, behavior: "instant" });
+          const section = img.closest(".ramen-story") || img.parentElement;
+          scrollTo({ top: section.getBoundingClientRect().top + scrollY, behavior: "instant" });
           const r = img.getBoundingClientRect(),
             css = getComputedStyle(img),
             pos = css.objectPosition.split(" ").map((x) => parseFloat(x) / 100);
@@ -253,7 +254,7 @@ export async function fingerQA(
       // browser touch input: horizontal vapor trails AND ordinary vertical scroll.
       await page.evaluate(() =>
         scrollTo({
-          top: document.querySelector("#signature").offsetTop,
+          top: (document.querySelector("#miso-anatomy") || document.querySelector("#signature")).getBoundingClientRect().top + scrollY,
           behavior: "instant",
         }),
       );

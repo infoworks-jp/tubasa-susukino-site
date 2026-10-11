@@ -427,7 +427,7 @@ for (const name of names) {
     await fallback.goto(base, { waitUntil: "domcontentloaded" });
     await scrollTo(fallback, ".signature-miso");
     result.fallback = await fallback
-      .locator(".signature-miso img")
+      .locator(".signature-miso > img.media")
       .evaluate((img) => ({
         loaded: img.complete && img.naturalWidth > 0,
         opacity: getComputedStyle(img).opacity,
