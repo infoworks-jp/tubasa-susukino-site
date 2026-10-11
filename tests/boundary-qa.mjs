@@ -75,11 +75,7 @@ for (const name of names) {
           alignmentError:canvas ? Math.max(...["x","y","width","height"].map(k => Math.abs(a[k]-b[k]))) : 0,
           sameMask:!canvas || getComputedStyle(image).maskImage === getComputedStyle(canvas).maskImage };
       }, index);
-      if (index === 1) {
-        const story = await page.locator("#miso-anatomy").evaluate(e => ({travel:e.offsetHeight-innerHeight, gap:document.querySelector(".signature-butter-corn").getBoundingClientRect().top-e.getBoundingClientRect().bottom, screen:document.querySelector("#signature").getBoundingClientRect().height}));
-        assert(story.travel > 4 * height, "The story has space for six scenes");
-        assert(Math.abs(story.gap) < 2 && Math.abs(story.screen-height) < 2, "The sticky story ends directly before the next bowl");
-      } else assert.equal(check.gap, -check.overlap);
+      assert.equal(check.gap, index === 1 ? 0 : -check.overlap);
       assert.notEqual(check.mask, "none");
       assert.equal(check.copyMask, "none");
       assert.equal(check.copyOpacity, "1");

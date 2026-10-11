@@ -254,7 +254,7 @@ export async function fingerQA(
       // browser touch input: horizontal vapor trails AND ordinary vertical scroll.
       await page.evaluate(() =>
         scrollTo({
-          top: (document.querySelector("#miso-anatomy") || document.querySelector("#signature")).getBoundingClientRect().top + scrollY,
+          top: document.querySelector("#signature").getBoundingClientRect().top + scrollY,
           behavior: "instant",
         }),
       );
