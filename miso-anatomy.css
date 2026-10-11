@@ -14,3 +14,5 @@ button.food-piece{padding:0;border:0;background:none;color:inherit;cursor:zoom-i
 #anatomy-screen:not([data-scene="0"])>.signature-copy{visibility:hidden}#anatomy-screen .story-top{top:88px;left:20%}#anatomy-screen[data-scene="1"] .story-copy{top:18%}@media(max-width:700px){#anatomy-screen .story-top{top:76px;left:auto;right:6%}#anatomy-screen .story-top>span{display:none}#anatomy-screen .story-copy,#anatomy-screen[data-scene="1"] .story-copy{top:17%}}
 @media(max-width:700px){#anatomy-screen[data-scene="1"] .story-copy h2{font-size:26px}#anatomy-screen[data-scene="1"] .story-copy h2 br{display:none}}
 #anatomy-screen .food-stage{pointer-events:none}#anatomy-screen .food-piece{pointer-events:auto}#anatomy-screen .food-piece:disabled{pointer-events:none}
+
+#anatomy-screen[data-scene="5"] .food-piece{opacity:0;pointer-events:none}#anatomy-screen[data-scene="5"] .ingredient-controls{visibility:hidden;pointer-events:none}
