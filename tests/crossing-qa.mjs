@@ -26,7 +26,7 @@ for(const name of cases){
    return {state:{...__tsubasaCrossing},paper:[...d],order:[...document.querySelector('main').children].filter(e=>e.matches('section')).slice(0,3).map(e=>e.id),
     src:document.querySelector('#top .hero-bg').currentSrc,videoLoaded:!!document.querySelector('#videoTop video').dataset.loaded};
   });
-  assert.deepEqual(initial.order,['top','videoTop','signature']);
+  assert.deepEqual(initial.order,['top','videoTop','miso-anatomy']);
   assert.deepEqual(initial.paper,[250,249,246,255]);
   assert(initial.src.endsWith('/assets/susukino-top.webp'));
   assert.equal(initial.videoLoaded,false,'Do not fetch the below-fold video during the entrance');
