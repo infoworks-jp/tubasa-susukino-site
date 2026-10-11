@@ -13,3 +13,4 @@ button.food-piece{padding:0;border:0;background:none;color:inherit;cursor:zoom-i
 #signature .story-bottom{pointer-events:none}#signature .scene-nav button{pointer-events:auto}#signature[data-scene="0"] .scene-nav button{pointer-events:none}
 #signature:not([data-scene="0"])>.signature-copy{visibility:hidden}#signature .story-top{top:88px;left:20%}#signature[data-scene="1"] .story-copy{top:18%}@media(max-width:700px){#signature .story-top{top:76px;left:auto;right:6%}#signature .story-top>span{display:none}#signature .story-copy,#signature[data-scene="1"] .story-copy{top:17%}}
 @media(max-width:700px){#signature[data-scene="1"] .story-copy h2{font-size:26px}#signature[data-scene="1"] .story-copy h2 br{display:none}}
+#signature .food-stage{pointer-events:none}#signature .food-piece{pointer-events:auto}#signature .food-piece:disabled{pointer-events:none}
