@@ -1,5 +1,6 @@
 name: Location Scout QA
 on:
+  workflow_call:
   pull_request:
     branches: [main]
     paths: ['location/**', 'location-data.geojson', 'tests/location-browser-qa.mjs', '.github/workflows/location-qa.yml']
