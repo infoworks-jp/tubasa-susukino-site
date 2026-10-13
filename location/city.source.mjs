@@ -733,6 +733,8 @@ async function start() {
     const lowTrees = await loader.loadAsync("./susukino-trees-low.glb");
     lowTrees.scene.traverse((o) => {
       if (!o.isMesh) return;
+      // Singleton trees already exist in the detailed model; do not overlay a second copy.
+      if (!o.isInstancedMesh) {o.visible=false;return;}
       o.castShadow = true;
       o.receiveShadow = true;
       const list = Array.isArray(o.material) ? o.material : [o.material];
