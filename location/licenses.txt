@@ -1,6 +1,6 @@
 味一番つばさ 3Dロケハン
-独自実装。参考: どこでもロケハン（おやすみゲーム開発部）
-元ツールのコード・画像は複製していません。
+独自ビューア＋許可されたモデル出力を使用。参考: どこでもロケハン（おやすみゲーム開発部）
+元ツール本体のコードは複製していません。モデルは作者が商用利用・配布を許可した正規GLB出力です。
 
 地図データ: © OpenStreetMap contributors (ODbL 1.0)
 https://www.openstreetmap.org/copyright
@@ -8,7 +8,7 @@ https://www.openstreetmap.org/copyright
 OpenFreeMap https://openfreemap.org/
 地図取得: 2026-10-13
 地図タイルはGeoJSONへ変換して同じサイトから配信しています。
-高さ不明の建物は15mと推定。窓・色は表現上の装飾。標高・実景写真・実際の看板は再現していません。
+高さは地図の値または参考ツールの推定です。周辺の窓・店先・看板・屋上設備は生成装飾で、実景の外観ではありません。横丁入口は利用許可のある提供写真を使っています。標高は平坦化しています。
 画像の商用利用時も地図データの出典を保持してください。
 
 Three.js 0.183.2 / OrbitControls / GLTFExporter
@@ -41,4 +41,64 @@ https://opendatacommons.org/licenses/odbl/1-0/
 Place verification (static facts, no runtime requests):
 Google Maps shop/place coordinates, building manager B1F directory, and user-supplied street photograph (2026-10-13).
 See position-evidence.md and landmarks.mjs for sources and accuracy limits.
-Entrance and visible signs are independently drawn approximate geometry, not copied photographs or assets from the reference tool.
+Entrance photo surfaces use the user-authorized photograph and measured pixel proportions. Physical dimensions are approximate. Surrounding architecture uses the permitted reference-tool model output.
+
+Detailed Susukino city model:
+Generated and exported with “どこでもロケハン” by MIYADAIKU / おやすみゲーム開発部, 2026-10-14.
+https://oyasumi-gamedev.com/tools/rokehan/
+The author's guide explicitly permits commercial/noncommercial use and redistribution of exported GLB/FBX/OBJ models with map attribution. The map-data portions remain ODbL.
+© OpenStreetMap contributors — https://www.openstreetmap.org/copyright
+Export URL and exact processing/limitations: reference-model.md.
+The tool's implementation code has not been copied.
+
+Meshoptimizer decoder (MIT), bundled through Three.js:
+https://github.com/zeux/meshoptimizer
+three-mesh-bvh (MIT): https://github.com/gkjohnson/three-mesh-bvh
+
+Entrance photograph: supplied by the user; creation/reuse permission confirmed 2026-10-14.
+
+Full license — three-mesh-bvh:
+MIT License
+
+Copyright (c) 2018 Garrett Johnson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Full license — meshoptimizer decoder:
+MIT License
+
+Copyright (c) 2016-2025 Arseny Kapoulkine
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

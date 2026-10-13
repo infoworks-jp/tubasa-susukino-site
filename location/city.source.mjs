@@ -3,6 +3,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { makeTreeLOD } from "./tree-lod.mjs";
+import { addPhotoFacade, setPhotoMode } from "./photo-facade.mjs";
+import { computeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { MangaRenderer } from "./manga-renderer.mjs";
 import { landmarks } from "./landmarks.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 const canvas = document.querySelector("#city"),
@@ -53,13 +59,19 @@ const makeShape = (poly) => {
     shape.holes.push(new THREE.Path(r.map((p) => new THREE.Vector2(...p))));
   return shape;
 };
-let renderer,
+let updateTreeLOD,
+  photoMaterials = [],
+  mangaRenderer,
+  renderer,
   scene,
   camera,
   controls,
   city,
   mode = "color";
-const buildingMaterials = [],
+const collisionMeshes = [],
+  floorRay = new THREE.Raycaster(),
+  floorCache = { x: NaN, z: NaN, value: 4 },
+  buildingMaterials = [],
   edges = [],
   windows = [],
   landMaterials = [],
@@ -67,7 +79,8 @@ const buildingMaterials = [],
   footprints = [],
   glass = [],
   fatEdges = [],
-  frontMaterials = [];
+  frontMaterials = [],
+  referenceMaterials = [];
 let shopLabel,
   comicContours,
   frontage,
@@ -75,6 +88,12 @@ let shopLabel,
   activeView = "overview",
   exporting = false,
   constraining = false;
+const streetClipPlanes = [
+  new THREE.Plane(new THREE.Vector3(1, 0, 0), 200),
+  new THREE.Plane(new THREE.Vector3(-1, 0, 0), 200),
+  new THREE.Plane(new THREE.Vector3(0, 0, 1), 200),
+  new THREE.Plane(new THREE.Vector3(0, 0, -1), 200),
+];
 const credits = "© OpenStreetMap contributors / © OpenMapTiles / OpenFreeMap";
 function save(blob, name) {
   const url = URL.createObjectURL(blob),
@@ -127,13 +146,21 @@ function inRing(x, z, ring) {
   return inside;
 }
 function cameraFloor(x, z) {
+  if (floorCache.x === x && floorCache.z === z) return floorCache.value;
   let floor = 4;
-  for (const f of footprints)
+  if (collisionMeshes.length) {
+    floorRay.set(new THREE.Vector3(x, 500, z), new THREE.Vector3(0, -1, 0));
+    floorRay.firstHitOnly = true;
+    const hit = floorRay.intersectObjects(collisionMeshes, false)[0];
+    if (hit) floor = Math.max(floor, hit.point.y + 5);
+  }
+  for (const f of collisionMeshes.length ? [] : footprints)
     if (
       inRing(x, z, f.rings[0]) &&
       !f.rings.slice(1).some((r) => inRing(x, z, r))
     )
       floor = Math.max(floor, f.height + 5);
+  Object.assign(floorCache, { x, z, value: floor });
   return floor;
 }
 function constrainCamera() {
@@ -155,6 +182,8 @@ function constrainCamera() {
 function render() {
   if (!renderer) return;
   constrainCamera();
+  if (!exporting && updateTreeLOD?.(camera))
+    renderer.shadowMap.needsUpdate = true;
   camera.updateMatrixWorld();
   if (shopLabel) {
     const rect = canvas.getBoundingClientRect(),
@@ -197,7 +226,9 @@ function render() {
     floor: cameraFloor(camera.position.x, camera.position.z),
     label: shopLabel?.position.clone().project(camera).toArray(),
   });
-  renderer.render(scene, camera);
+  if (mode === "tone" || mode === "line")
+    mangaRenderer.render(scene, camera, mode, [comicContours]);
+  else renderer.render(scene, camera);
 }
 function roadSegment(a, b, width) {
   const aa = xy(a),
@@ -236,137 +267,6 @@ function roadSegment(a, b, width) {
   mesh.receiveShadow = true;
   city.add(mesh);
 }
-function addBuilding(poly, properties, index) {
-  const shape = makeShape(poly);
-  if (!shape) return;
-  const raw = Number(properties.render_height ?? properties.height),
-    h = Number.isFinite(raw) && raw > 0 ? Math.min(raw, 180) : 15;
-  footprints.push({
-    rings: poly.map(clipRing).filter((r) => r.length >= 3),
-    height: h,
-  });
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: h,
-    bevelEnabled: false,
-    steps: 1,
-  });
-  geometry.rotateX(-Math.PI / 2);
-  const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color().setHSL(
-      0.07 + (index % 5) * 0.018,
-      0.09,
-      0.62 + (index % 4) * 0.035,
-    ),
-    roughness: 0.92,
-  });
-  buildingMaterials.push(material);
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.userData = {
-    height: h,
-    heightSource: Number.isFinite(raw) && raw > 0 ? "map" : "estimated",
-    mapProperties: properties,
-  };
-  city.add(mesh);
-  const edge = new THREE.LineSegments(
-    new THREE.EdgesGeometry(geometry, 30),
-    new THREE.LineBasicMaterial({
-      color: 0x28272b,
-      transparent: true,
-      opacity: 0.68,
-    }),
-  );
-  edges.push(edge);
-  city.add(edge);
-  const contour = new LineSegments2(
-    new LineSegmentsGeometry().setPositions(
-      edge.geometry.attributes.position.array,
-    ),
-    new LineMaterial({ color: 0x161619, linewidth: 1.4 }),
-  );
-  contour.computeLineDistances();
-  fatEdges.push(contour);
-  comicContours.add(contour);
-  const verts = [];
-  const ring = clipRing(poly[0]);
-  const orientation =
-    Math.sign(
-      ring.reduce((sum, a, i) => {
-        const b = ring[(i + 1) % ring.length];
-        return sum + a[0] * b[1] - b[0] * a[1];
-      }, 0),
-    ) || 1;
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i],
-      b = ring[(i + 1) % ring.length],
-      len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    if (len < 6) continue;
-    for (let height = 3.5; height < h - 1; height += 3.7) {
-      for (let d = 2; d < len - 1; d += 3.3) {
-        const ox = ((b[1] - a[1]) / len) * 0.08 * orientation,
-          oy = (-(b[0] - a[0]) / len) * 0.08 * orientation;
-        const t = d / len,
-          t2 = Math.min((d + 1.2) / len, 0.97);
-        const left = [
-            a[0] + (b[0] - a[0]) * t + ox,
-            -a[1] - oy - (b[1] - a[1]) * t,
-          ],
-          right = [
-            a[0] + (b[0] - a[0]) * t2 + ox,
-            -a[1] - oy - (b[1] - a[1]) * t2,
-          ];
-        for (const [u, v] of [
-          [
-            [left[0], height, left[1]],
-            [right[0], height, right[1]],
-          ],
-          [
-            [right[0], height, right[1]],
-            [right[0], height + 1.6, right[1]],
-          ],
-          [
-            [right[0], height + 1.6, right[1]],
-            [left[0], height + 1.6, left[1]],
-          ],
-          [
-            [left[0], height + 1.6, left[1]],
-            [left[0], height, left[1]],
-          ],
-        ])
-          verts.push(...u, ...v);
-      }
-    }
-  }
-  const filled = [];
-  for (let k = 0; k < verts.length; k += 24)
-    for (const n of [0, 1, 3, 0, 3, 5])
-      filled.push(...verts.slice(k + n * 3, k + n * 3 + 3));
-  const gg = new THREE.BufferGeometry();
-  gg.setAttribute("position", new THREE.Float32BufferAttribute(filled, 3));
-  const gm = new THREE.MeshBasicMaterial({
-    color: 0x313136,
-    transparent: true,
-    opacity: 0.65,
-    side: THREE.DoubleSide,
-  });
-  const glazing = new THREE.Mesh(gg, gm);
-  glazing.userData = { detail: "Decorative windows, not surveyed" };
-  glass.push(glazing);
-  city.add(glazing);
-  const wm = new THREE.LineBasicMaterial({
-    color: 0x47464a,
-    transparent: true,
-    opacity: 0.5,
-    depthTest: true,
-  });
-  const wg = new THREE.BufferGeometry();
-  wg.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
-  const w = new THREE.LineSegments(wg, wm);
-  w.renderOrder = 2;
-  windows.push(w);
-  city.add(w);
-}
 function comicMaterial(m, tone, line) {
   m.onBeforeCompile = (shader) => {
     if (line)
@@ -399,6 +299,9 @@ function describeMode() {
 }
 function applyMode(next) {
   mode = next;
+  photoMaterials.forEach((m) =>
+    setPhotoMode(m, next, renderer.getPixelRatio()),
+  );
   const night = mode === "night",
     line = mode === "line",
     tone = mode === "tone";
@@ -407,7 +310,7 @@ function applyMode(next) {
   );
   scene.fog.color.copy(scene.background);
   scene.getObjectByName("sun").intensity = night ? 0.25 : 2.4;
-  scene.getObjectByName("ambient").intensity = night ? 0.8 : tone ? 0.65 : 1.5;
+  scene.getObjectByName("ambient").intensity = night ? 0.8 : 1.5;
   buildingMaterials.forEach((m, i) => {
     m.color.set(
       line || tone
@@ -422,7 +325,7 @@ function applyMode(next) {
     );
     m.emissive.set(night ? 0x090c20 : 0x000000);
     m.userData.tone = tone;
-    comicMaterial(m, tone, line);
+    comicMaterial(m, false, line);
   });
   edges.forEach((e) => {
     e.material.color.set(night ? 0x555d85 : 0x28272b);
@@ -432,6 +335,10 @@ function applyMode(next) {
   glass.forEach((w) => {
     w.material.color.set(night ? 0xf0c167 : 0x202026);
     w.material.opacity = night ? 0.5 : line ? 0.9 : tone ? 0.8 : 0.5;
+  });
+  referenceMaterials.forEach((m) => {
+    m.color.set(mode === "night" ? 0x747993 : m.userData.dayColor);
+    comicMaterial(m, false, false);
   });
   frontage?.traverse((o) => {
     if (o.material?.userData?.isEntranceSign) {
@@ -449,11 +356,7 @@ function applyMode(next) {
         : m.userData.dayColor,
     );
     m.emissive?.set(night ? 0x111711 : 0x000000);
-    comicMaterial(
-      m,
-      tone && !m.userData.inkSolid,
-      line && !m.userData.inkSolid,
-    );
+    comicMaterial(m, false, line && !m.userData.inkSolid);
   });
   windows.forEach((w) => {
     w.material.color.set(night ? 0xf0c167 : 0x47464a);
@@ -478,23 +381,54 @@ function view(name) {
   const aspect = canvas.clientWidth / canvas.clientHeight;
   if (name === "overview") {
     controls.target.set(-15, 12, 10);
-    const distance = aspect < 1 ? 1200 : 900;
-    camera.position
-      .copy(controls.target)
-      .add(
-        new THREE.Vector3(1, 1.2, 1.15).normalize().multiplyScalar(distance),
-      );
+    const direction = new THREE.Vector3(1, 1.2, 1.15).normalize();
+    const corners = [];
+    for (const x of [-200, 200])
+      for (const y of [0, 120])
+        for (const z of [-200, 200]) corners.push(new THREE.Vector3(x, y, z));
+    let distance = 500;
+    for (; distance < 1400; distance += 10) {
+      camera.position
+        .copy(controls.target)
+        .addScaledVector(direction, distance);
+      camera.lookAt(controls.target);
+      camera.updateMatrixWorld();
+      const fits = corners.every((p) => {
+        const q = p.clone().project(camera);
+        return Math.abs(q.x) < 0.9 && q.y < 0.64 && q.y > -0.72;
+      });
+      if (fits) break;
+    }
   } else if (name === "crossing") {
     const p = xy([141.35336, 43.05563]);
-    controls.target.set(-25, 20, 0);
-    camera.position.set(p[0] - 60, 100, -p[1] + 85);
+    controls.target.set(entryXZ[0], 8, entryXZ[1]);
+    let point = [p[0], -p[1]];
+    let found = false;
+    for (let radius = 0; radius <= 30 && !found; radius += 2) {
+      for (let i = 0; i < 16; i++) {
+        const candidate = [
+          p[0] + Math.cos((i * Math.PI) / 8) * radius,
+          -p[1] + Math.sin((i * Math.PI) / 8) * radius,
+        ];
+        if (cameraFloor(...candidate) <= 6.5) {
+          point = candidate;
+          found = true;
+          break;
+        }
+      }
+    }
+    camera.position.set(point[0], 6.5, point[1]);
   } else {
     if (name === "entrance") {
-      controls.target.set(entryXZ[0] + 4, 4, entryXZ[1]);
+      controls.target.set(
+        entryXZ[0] + (aspect < 1 ? 0 : 4),
+        aspect < 1 ? 2.7 : 4,
+        entryXZ[1],
+      );
       camera.position.set(
-        entryXZ[0] + 4,
-        6.5,
-        entryXZ[1] - (aspect < 1 ? 34 : 23),
+        entryXZ[0] + (aspect < 1 ? 0 : 4),
+        aspect < 1 ? 5 : 6.5,
+        entryXZ[1] - (aspect < 1 ? 24 : 23),
       );
     } else {
       controls.target.set(shopXZ[0], 16, shopXZ[1]);
@@ -525,225 +459,45 @@ function addFrontage() {
   frontage.rotation.y = 0.173;
   frontage.userData = {
     ...landmarks.entrance,
-    source: "User street photograph, 2026-10-13",
-    limitations: "Dimensions approximate; interior route is a schematic",
+    source: "User photograph; permission confirmed 2026-10-14",
+    limitations:
+      "Photograph rectified proportions; dimensions approximate, no surveyed indoor plan",
   };
   city.add(frontage);
   const box = (w, h, d, x, y, z, color) => {
-    const m = new THREE.MeshStandardMaterial({ color, roughness: 1 });
-    m.userData.dayColor = color;
-    m.userData.inkSolid = [0x17181a, 0x353a3b, 0x202d4e].includes(color);
-    frontMaterials.push(m);
-    const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-    o.position.set(x, y, z);
-    o.castShadow = true;
-    o.receiveShadow = true;
-    frontage.add(o);
-    const e = new THREE.LineSegments(
-      new THREE.EdgesGeometry(o.geometry),
-      new THREE.LineBasicMaterial({ color: 0x151519 }),
-    );
-    e.position.copy(o.position);
-    frontage.add(e);
-    frontage.updateMatrixWorld(true);
-    const contour = new LineSegments2(
-      new LineSegmentsGeometry().setPositions(
-        e.geometry.attributes.position.array,
-      ),
-      new LineMaterial({ color: 0x161619, linewidth: 1.4 }),
-    );
-    contour.applyMatrix4(o.matrixWorld);
-    fatEdges.push(contour);
-    comicContours.add(contour);
-    return o;
-  };
-  box(3.6, 3.3, 0.35, 0, 1.55, -0.18, 0x736b59);
-  box(3.05, 2.75, 0.06, 0, 1.25, -0.39, 0x17181a);
-  box(0.15, 2.6, 0.15, -1.52, 1.25, -0.5, 0xc1bbb0);
-  box(0.15, 2.6, 0.15, 1.52, 1.25, -0.5, 0xc1bbb0);
-  box(3.5, 2.4, 0.3, 0, 4, -0.35, 0x397d57);
-  box(3.2, 2.1, 0.06, 0, 4, -0.53, 0xf3eedc);
-  box(3.45, 0.2, 0.3, 0, 2.75, -0.5, 0x397d57);
-  const sign = document.createElement("canvas");
-  sign.width = 1024;
-  sign.height = 768;
-  const ctx = sign.getContext("2d");
-  ctx.fillStyle = "#f4efdf";
-  ctx.fillRect(0, 0, 1024, 768);
-  ctx.strokeStyle = "#376d4c";
-  ctx.lineWidth = 20;
-  ctx.strokeRect(20, 20, 984, 728);
-  for (let x = 40; x < 980; x += 100) {
-    ctx.strokeRect(x, 45, 65, 45);
-    ctx.strokeRect(x, 650, 65, 45);
-  }
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#ac3034";
-  ctx.font = "bold 100px serif";
-  ctx.fillText("さっぽろ名所", 512, 230);
-  ctx.font = "bold 135px serif";
-  ctx.fillText("新ラーメン横丁", 512, 440);
-  ctx.fillStyle = "#31362e";
-  ctx.font = "60px sans-serif";
-  ctx.fillText("No.3 グリーンビル", 512, 610);
-  const texture = new THREE.CanvasTexture(sign);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    toneMapped: false,
-  });
-  material.userData.isEntranceSign = true;
-  const mono = document.createElement("canvas");
-  mono.width = 1024;
-  mono.height = 768;
-  const mc = mono.getContext("2d");
-  mc.fillStyle = "#fff";
-  mc.fillRect(0, 0, 1024, 768);
-  mc.strokeStyle = "#111";
-  mc.lineWidth = 20;
-  mc.strokeRect(20, 20, 984, 728);
-  for (let x = 40; x < 980; x += 100) {
-    mc.strokeRect(x, 45, 65, 45);
-    mc.strokeRect(x, 650, 65, 45);
-  }
-  mc.fillStyle = "#111";
-  mc.textAlign = "center";
-  mc.font = "bold 100px serif";
-  mc.fillText("さっぽろ名所", 512, 230);
-  mc.font = "bold 135px serif";
-  mc.fillText("新ラーメン横丁", 512, 440);
-  mc.font = "60px sans-serif";
-  mc.fillText("No.3 グリーンビル", 512, 610);
-  const monoTexture = new THREE.CanvasTexture(mono);
-  monoTexture.colorSpace = THREE.SRGBColorSpace;
-  material.colorTexture = texture;
-  material.monoTexture = monoTexture;
-  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(3.15, 2.05), material);
-  plaque.position.set(0, 4, -0.58);
-  plaque.rotation.y = Math.PI;
-  frontage.add(plaque);
-  // Entry handrail and curb, visible in the supplied photo; sizes are approximate.
-  for (const x of [-1.2, 1.2]) {
-    box(0.06, 0.85, 0.06, x, 0.35, -1, 0xb4b0a4);
-    box(0.06, 0.06, 1.9, x, 0.8, -1.5, 0xb4b0a4);
-  }
-  box(13, 0.16, 3.5, 4, -0.04, -2.2, 0xb8b6aa);
-  box(13, 0.3, 0.2, 4, -0.1, -4, 0x8a887e);
-  // Measured relationships in the user's 1321×979 image: the entrance sign
-  // is x≈790..985, while the broad green tenant sign is x≈105..495.
-  // Approximate dimensions use a person as scale, not a surveyed elevation.
-  box(14, 8.8, 0.12, 7, 4.4, -0.24, 0x9b9487);
-  // Brick piers and horizontal framing visible beside the alley entrance.
-  for (const x of [1.85, 5.7, 13.8]) {
-    box(0.5, 8.8, 0.25, x, 4.4, -0.45, 0x76534b);
-    for (let y = 0.5; y < 8.8; y += 0.35)
-      box(0.52, 0.015, 0.02, x, y, -0.6, 0x443735);
-  }
-  const board = (text, w, h, x, y, bg, fg, font = 90) => {
-    const c = document.createElement("canvas");
-    c.width = 1024;
-    c.height = 512;
-    const k = c.getContext("2d");
-    k.fillStyle = bg;
-    k.fillRect(0, 0, 1024, 512);
-    k.strokeStyle = fg;
-    k.lineWidth = 10;
-    k.strokeRect(12, 12, 1000, 488);
-    k.fillStyle = fg;
-    k.textAlign = "center";
-    k.font = `bold ${font}px sans-serif`;
-    const lines = text.split("|");
-    lines.forEach((t, i) =>
-      k.fillText(t, 512, (512 / (lines.length + 1)) * (i + 1)),
-    );
-    const color = new THREE.CanvasTexture(c);
-    color.colorSpace = THREE.SRGBColorSpace;
-    const mono = document.createElement("canvas");
-    mono.width = 1024;
-    mono.height = 512;
-    const mk = mono.getContext("2d");
-    mk.fillStyle = "#fff";
-    mk.fillRect(0, 0, 1024, 512);
-    mk.strokeStyle = "#111";
-    mk.lineWidth = 10;
-    mk.strokeRect(12, 12, 1000, 488);
-    mk.fillStyle = "#111";
-    mk.textAlign = "center";
-    mk.font = `bold ${font}px sans-serif`;
-    lines.forEach((t, i) =>
-      mk.fillText(t, 512, (512 / (lines.length + 1)) * (i + 1)),
-    );
-    const ink = new THREE.CanvasTexture(mono);
-    ink.colorSpace = THREE.SRGBColorSpace;
-    const m = new THREE.MeshBasicMaterial({ map: color, toneMapped: false });
-    m.userData.isEntranceSign = true;
-    m.colorTexture = color;
-    m.monoTexture = ink;
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
-    mesh.rotation.y = Math.PI;
-    mesh.position.set(x, y, -0.68);
-    mesh.userData = {
-      source: "Visible in user street photograph; not current tenant guarantee",
-    };
+    const material = new THREE.MeshStandardMaterial({ color, roughness: 1 });
+    material.userData.dayColor = color;
+    material.userData.inkSolid = color === 0x17181a;
+    frontMaterials.push(material);
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     frontage.add(mesh);
-    box(w + 0.15, h + 0.15, 0.12, x, y, -0.54, 0x8c897c);
+    return mesh;
   };
-  board("レイク　B1", 6, 1.7, 9, 6.1, "#5b984b", "#f3f4dd", 135);
-  board("F.UOSEN-SUISAN|魚鮮水産", 6, 2.2, 9, 8.2, "#f3f2e7", "#2f584c", 100);
-  board("鳥貴族|TORIKIZOKU", 2.2, 1.0, 3.4, 6.6, "#d5b86f", "#694238", 86);
-  board("レイク B1", 2.2, 1.1, 3.4, 5.5, "#589c49", "#f3f4e4", 125);
-  // Only the visible silhouette of the upper blue advertisement is retained;
-  // the cropped product wording is not invented.
-  box(4.2, 3, 0.1, -0.5, 8.5, -0.39, 0x202d4e);
-  for (let x = 2.1; x < 6.9; x += 0.25)
-    box(0.035, 1.5, 0.07, x, 9.2, -0.62, 0x447054);
-  box(5, 0.055, 0.1, 4.5, 9.8, -0.64, 0x447054);
-  box(2.8, 0.22, 0.9, 3.5, 2.4, -0.85, 0x8b3838);
-  box(2.8, 2.1, 0.08, 3.5, 1.15, -0.63, 0x353a3b);
-  // One street tree is visible in the provided photo. Its crown is schematic.
-  box(0.14, 3.8, 0.14, 10.6, 1.9, -2.4, 0x685144);
-  for (const [x, y, z, r] of [
-    [10.6, 3.1, -2.4, 1.25],
-    [9.7, 3.4, -2.3, 1],
-    [11.5, 3.4, -2.4, 1],
-  ]) {
-    const m = new THREE.MeshStandardMaterial({ color: 0x3a593d, roughness: 1 });
-    m.userData.dayColor = 0x3a593d;
-    frontMaterials.push(m);
-    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), m);
-    crown.position.set(x, y, z);
-    crown.castShadow = true;
-    crown.scale.y = 0.65;
-    frontage.add(crown);
-    // Closed smooth crowns have no EdgesGeometry silhouette. Render an
-    // inverted hull for manga modes, outside the exported city group.
-    frontage.updateMatrixWorld(true);
-    const outline = new THREE.Mesh(
-      crown.geometry,
-      new THREE.MeshBasicMaterial({ color: 0x151519, side: THREE.BackSide }),
-    );
-    outline.matrixAutoUpdate = false;
-    outline.matrix
-      .copy(crown.matrixWorld)
-      .multiply(new THREE.Matrix4().makeScale(1.04, 1.04, 1.04));
-    comicContours.add(outline);
-    const e = new THREE.LineSegments(
-      new THREE.EdgesGeometry(crown.geometry, 35),
-      new THREE.LineBasicMaterial({ color: 0x1d2720 }),
-    );
-    e.position.copy(crown.position);
-    e.scale.copy(crown.scale);
-    frontage.add(e);
+  // All photo panels use one pixel-to-metre frame: sign width 198px = 3.2m,
+  // image ground at y575. Absolute scale is approximate; relative sizes are measured.
+  box(16, 9.3, 0.18, 5.5, 4.65, -0.24, 0x9b9487);
+  // Actual open entrance: separate jambs/head and a recessed back, not a flat black board.
+  box(3.2, 1.65, 0.08, 0, 0.82, 0.8, 0x17181a);
+  box(0.16, 1.65, 1.3, -1.66, 0.82, 0.2, 0xc1bbb0);
+  box(0.16, 1.65, 1.3, 1.66, 0.82, 0.2, 0xc1bbb0);
+  box(3.48, 0.16, 1.3, 0, 1.73, 0.2, 0xc1bbb0);
+  // Foreground wall covers the generated facade; the opening remains visibly dark.
+  box(3.2, 1.65, 0.06, 0, 0.82, -0.46, 0x17181a);
+  box(3.5, 2.55, 0.35, 0, 3, -0.35, 0x397d57);
+  for (const x of [-1.81, 5.24]) {
+    box(0.42, 9.3, 0.25, x, 4.65, -0.45, 0x76534b);
+    for (let y = 0.3; y < 9.3; y += 0.18)
+      box(0.43, 0.012, 0.015, x, y, -0.59, 0x443735);
   }
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(2.1, 0.14, 8, 48),
-    new THREE.MeshBasicMaterial({ color: 0x378864 }),
-  );
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.set(entryXZ[0], 0.3, entryXZ[1] - 1.8);
-  ring.name = "Shin Ramen Yokocho entrance vicinity";
-  ring.userData = landmarks.entrance;
-  city.add(ring);
+  for (const x of [-1.35, 0.4]) {
+    box(0.045, 0.7, 0.045, x, 0.35, -0.9, 0xb4b0a4);
+    box(0.045, 0.045, 1.2, x, 0.7, -1.3, 0xb4b0a4);
+  }
+  box(16, 0.16, 3.5, 5.5, -0.04, -2.2, 0xb8b6aa);
+  box(16, 0.3, 0.2, 5.5, -0.1, -4, 0x8a887e);
 }
 function drawLocator(data) {
   const map = document.querySelector("#locator"),
@@ -841,8 +595,13 @@ async function start() {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.localClippingEnabled = true;
+    mangaRenderer = new MangaRenderer(renderer);
+    mangaRenderer.normalMaterial.clippingPlanes = streetClipPlanes;
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0xe8e6df, 1500, 2200);
     comicContours = new THREE.Group();
@@ -887,58 +646,108 @@ async function start() {
     sun.shadow.camera.far = 850;
     sun.shadow.normalBias = 0.5;
     scene.add(sun);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0xd7d8d2,
-      roughness: 1,
-    });
-    landMaterials.push(groundMat);
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(limit * 2, limit * 2),
-      groundMat,
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    city.add(ground);
     let count = 0;
     for (const f of data.features) {
-      if (
-        f.properties.layer === "transportation" &&
-        f.properties.brunnel !== "tunnel" &&
-        f.properties.class !== "transit"
-      ) {
-        const klass = f.properties.class;
-        const width =
-          {
-            motorway: 22,
-            trunk: 20,
-            primary: 19,
-            secondary: 16,
-            tertiary: 12,
-            minor: 9,
-            service: 5,
-            path: 2,
-            footway: 2,
-          }[klass] ?? 6;
-        const ls =
-          f.geometry.type === "MultiLineString"
-            ? f.geometry.coordinates
-            : f.geometry.type === "LineString"
-              ? [f.geometry.coordinates]
-              : [];
-        for (const l of ls)
-          for (let i = 1; i < l.length; i++) roadSegment(l[i - 1], l[i], width);
-      }
-      if (f.properties.layer === "building") {
-        const polys =
-          f.geometry.type === "MultiPolygon"
-            ? f.geometry.coordinates
-            : f.geometry.type === "Polygon"
-              ? [f.geometry.coordinates]
-              : [];
-        for (const poly of polys) addBuilding(poly, f.properties, count++);
+      if (f.properties.layer !== "building") continue;
+      const polys =
+        f.geometry.type === "MultiPolygon"
+          ? f.geometry.coordinates
+          : [f.geometry.coordinates];
+      for (const poly of polys) {
+        const h =
+          Number(f.properties.render_height ?? f.properties.height) || 15;
+        footprints.push({
+          rings: poly.map(clipRing).filter((r) => r.length >= 3),
+          height: h,
+        });
+        count++;
       }
     }
+    status.textContent = "詳細な街区モデルを読み込み中…";
+    const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+    const imported = await loader.loadAsync(
+      "./susukino-detail.glb",
+      (event) => {
+        status.textContent = `詳細な街区モデルを読み込み中… ${Math.round(event.loaded / 1024 / 1024)} MB`;
+      },
+    );
+    imported.scene.name = "Susukino / permitted Rokehan GLB output";
+    imported.scene.userData = {
+      source: "https://oyasumi-gamedev.com/tools/rokehan/",
+      attribution: credits,
+      license: "Exported model commercial reuse permitted; map data ODbL",
+      limitations:
+        "Procedural facades, signs and roof equipment are not surveyed real architecture",
+    };
+    imported.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = true;
+      o.receiveShadow = true;
+      if (o.name === "buildings" || o.name === "buildingsDetail") {
+        computeBoundsTree.call(o.geometry);
+        o.raycast = acceleratedRaycast;
+        collisionMeshes.push(o);
+      }
+      const list = Array.isArray(o.material) ? o.material : [o.material];
+      for (const material of list) {
+        material.clippingPlanes = streetClipPlanes;
+        material.clipShadows = true;
+        material.userData.dayColor = material.color.getHex();
+        material.userData.originalVertexColors = material.vertexColors;
+        referenceMaterials.push(material);
+      }
+    });
+    imported.scene.updateMatrixWorld(true);
+    const obstructingTrees = [];
+    imported.scene.traverse((o) => {
+      if (!o.isMesh || !o.name.startsWith("tree_")) return;
+      const blocks = (point) =>
+        Math.abs(point.x - entryXZ[0]) < 8 &&
+        point.z > entryXZ[1] - 18 &&
+        point.z < entryXZ[1] + 3;
+      if (o.isInstancedMesh) {
+        o.geometry.computeBoundingBox();
+        const center = o.geometry.boundingBox.getCenter(new THREE.Vector3());
+        for (let i = 0; i < o.count; i++) {
+          const matrix = new THREE.Matrix4();
+          o.getMatrixAt(i, matrix);
+          const point = center
+            .clone()
+            .applyMatrix4(matrix)
+            .applyMatrix4(o.matrixWorld);
+          if (blocks(point)) {
+            matrix.scale(new THREE.Vector3(1e-8, 1e-8, 1e-8));
+            o.setMatrixAt(i, matrix);
+          }
+        }
+        o.instanceMatrix.needsUpdate = true;
+      } else {
+        const point = new THREE.Box3()
+          .setFromObject(o)
+          .getCenter(new THREE.Vector3());
+        if (blocks(point)) obstructingTrees.push(o);
+      }
+    });
+    // Photo evidence takes precedence over generated vegetation at this doorway.
+    obstructingTrees.forEach((o) => o.removeFromParent());
+    const lowTrees = await loader.loadAsync("./susukino-trees-low.glb");
+    lowTrees.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = true;
+      o.receiveShadow = true;
+      const list = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of list) {
+        m.clippingPlanes = streetClipPlanes;
+        m.clipShadows = true;
+        m.userData.dayColor = m.color.getHex();
+        referenceMaterials.push(m);
+      }
+    });
+    city.add(lowTrees.scene);
+    updateTreeLOD = makeTreeLOD(imported.scene, lowTrees.scene);
+    city.add(imported.scene);
     addFrontage();
+    photoMaterials = await addPhotoFacade(frontage);
     const marker = new THREE.Mesh(
       new THREE.CylinderGeometry(0.65, 0.65, 80, 8),
       new THREE.MeshBasicMaterial({ color: 0xce3035 }),
@@ -1072,6 +881,8 @@ async function start() {
     document.querySelector("#glb").addEventListener("click", async () => {
       const b = document.querySelector("#glb");
       b.disabled = true;
+      exporting = true;
+      updateTreeLOD?.fullDetail();
       try {
         const result = await new GLTFExporter().parseAsync(city, {
           binary: true,
@@ -1086,6 +897,9 @@ async function start() {
       } catch {
         status.textContent = "3Dモデルの保存に失敗しました。";
       } finally {
+        exporting = false;
+        updateTreeLOD?.reset();
+        render();
         b.disabled = false;
       }
     });
@@ -1099,11 +913,15 @@ async function start() {
       document.documentElement.dataset.cityReady = "error";
     });
     document.documentElement.dataset.buildings = String(count);
-    document.documentElement.dataset.geometryVertices = String(
-      city.children
-        .filter((c) => c.isMesh)
-        .reduce((n, m) => n + (m.geometry.attributes.position?.count ?? 0), 0),
+    document.documentElement.dataset.collisionMeshes = String(
+      collisionMeshes.length,
     );
+    document.documentElement.dataset.detailSource = "rokehan-permitted-glb";
+    let totalVertices = 0;
+    city.traverse((o) => {
+      if (o.isMesh) totalVertices += o.geometry.attributes.position?.count ?? 0;
+    });
+    document.documentElement.dataset.geometryVertices = String(totalVertices);
   } catch (error) {
     console.error("[Tsubasa Location]", error);
     document.querySelector("#failure").hidden = false;

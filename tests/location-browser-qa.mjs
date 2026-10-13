@@ -4,11 +4,14 @@ import fs from "node:fs/promises";
 import assert from "node:assert/strict";
 const browser = await chromium.launch({
   executablePath: process.env.LOCATION_QA_EXECUTABLE || undefined,
-  args: [
-    "--use-angle=swiftshader",
-    "--enable-unsafe-swiftshader",
-    "--disable-dev-shm-usage",
-  ],
+  args:
+    process.env.LOCATION_QA_HARDWARE === "1" && process.platform === "darwin"
+      ? ["--use-angle=metal"]
+      : [
+          "--use-angle=swiftshader",
+          "--enable-unsafe-swiftshader",
+          "--disable-dev-shm-usage",
+        ],
 });
 await fs.mkdir("location-qa", { recursive: true });
 const base = process.env.LOCATION_QA_BASE || "http://127.0.0.1:8080";
@@ -120,6 +123,34 @@ for (const viewport of [
   }));
   assert.ok(geometry.buildings > 10);
   assert.ok(geometry.vertices > 1000);
+  assert.equal(
+    await page.evaluate(() => document.documentElement.dataset.detailSource),
+    "rokehan-permitted-glb",
+  );
+  assert.equal(
+    Number(
+      await page.evaluate(
+        () => document.documentElement.dataset.collisionMeshes,
+      ),
+    ),
+    2,
+  );
+  assert.ok(
+    Number(
+      await page.evaluate(
+        () => document.documentElement.dataset.treeDetailVertices,
+      ),
+    ) <= 2500000,
+    "near trees stay within the reference display budget",
+  );
+  assert.ok(
+    Number(
+      await page.evaluate(
+        () => document.documentElement.dataset.treeDrawVertices,
+      ),
+    ) <= 2500000,
+    "far high-detail instances are removed from GPU draws, not merely shrunk",
+  );
   for (const mode of ["color", "line", "tone", "night"]) {
     await page.locator(`[data-mode="${mode}"]`).click();
     await page.waitForTimeout(250);
@@ -205,11 +236,9 @@ for (const viewport of [
   assert.ok(entrance.position[1] >= entrance.floor);
   for (const mode of ["color", "line", "tone", "night"]) {
     await page.locator(`[data-mode="${mode}"]`).click();
-    await page
-      .locator(".stage")
-      .screenshot({
-        path: `location-qa/${viewport.width}-entrance-${mode}.png`,
-      });
+    await page.locator(".stage").screenshot({
+      path: `location-qa/${viewport.width}-entrance-${mode}.png`,
+    });
   }
   await page.locator('[data-view="overview"]').click();
   await page.locator("#city").focus();
@@ -256,6 +285,22 @@ for (const viewport of [
         json.nodes.some((n) => n.extras?.limitations?.includes("decorative")),
       );
       assert.ok(json.meshes.length > 100);
+      assert.ok(
+        json.nodes.some((n) =>
+          n.name?.includes("permitted Rokehan GLB output"),
+        ),
+        "export contains the detailed reference city",
+      );
+      assert.ok(
+        json.nodes.some((n) =>
+          n.name?.includes("Photograph: Shin Ramen Yokocho sign"),
+        ),
+        "export contains the photograph-aligned entrance sign",
+      );
+      assert.ok(
+        json.images?.length > 0,
+        "export preserves the licensed photograph texture",
+      );
       const landmark = json.nodes.find((n) => n.extras?.landmarks)?.extras
         .landmarks;
       assert.deepEqual(landmark.shop.coordinates, [141.3544949, 43.055336]);
