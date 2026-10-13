@@ -19,6 +19,10 @@ const page = await browser.newPage({
   viewport: { width: 1440, height: 1000 },
   locale: "ja-JP",
 });
+// Detailed exported geometry is intentionally preserved. SwiftShader may need
+// longer to drain GPU commands before the two stable frames required by capture.
+// This changes the capture wait budget, never assertions or visual checks.
+page.setDefaultTimeout(90000);
 const reference =
   "https://tools.oyasumi-gamedev.com/rokehan/#ll=35.659500%2C139.700500&s=300&far=2&n=%E6%B8%8B%E8%B0%B7%E3%82%B9%E3%82%AF%E3%83%A9%E3%83%B3%E3%83%96%E3%83%AB%E4%BA%A4%E5%B7%AE%E7%82%B9";
 let referenceError;

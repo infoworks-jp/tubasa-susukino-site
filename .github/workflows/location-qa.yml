@@ -10,7 +10,8 @@ permissions:
 jobs:
   location:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # CPU WebGL runs the same detailed scenes and assertions as the M4 check.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

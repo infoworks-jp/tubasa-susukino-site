@@ -22,3 +22,5 @@ node tests/location-browser-qa.mjs
 ```
 
 city.bundle.jsを直接編集せず、city.source.mjs・manga-renderer.mjs・photo-facade.mjsを編集して再生成する。公開経路は既存pages.yml。3D専用QAと既存サイトの全公開ゲートを維持する。
+
+CIはSwiftShaderによるCPU描画で同じ画面と検証を実行する。詳細モデルのGPU処理完了を待つため、操作・撮影待ち90秒、ジョブ上限30分を確保する。画像・操作・出典・保存・衝突の合否条件は維持する。Macの実GPU検証はLOCATION_QA_HARDWARE=1で同じテストを実行できる。
