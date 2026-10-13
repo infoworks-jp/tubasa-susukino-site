@@ -441,9 +441,19 @@ function applyMode(next) {
     }
   });
   frontMaterials.forEach((m) => {
-    m.color.set(line || tone ? 0xffffff : m.userData.dayColor);
+    m.color.set(
+      line || tone
+        ? m.userData.inkSolid
+          ? 0x101014
+          : 0xffffff
+        : m.userData.dayColor,
+    );
     m.emissive?.set(night ? 0x111711 : 0x000000);
-    comicMaterial(m, tone, line);
+    comicMaterial(
+      m,
+      tone && !m.userData.inkSolid,
+      line && !m.userData.inkSolid,
+    );
   });
   windows.forEach((w) => {
     w.material.color.set(night ? 0xf0c167 : 0x47464a);
@@ -522,6 +532,7 @@ function addFrontage() {
   const box = (w, h, d, x, y, z, color) => {
     const m = new THREE.MeshStandardMaterial({ color, roughness: 1 });
     m.userData.dayColor = color;
+    m.userData.inkSolid = [0x17181a, 0x353a3b, 0x202d4e].includes(color);
     frontMaterials.push(m);
     const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
     o.position.set(x, y, z);
@@ -704,6 +715,18 @@ function addFrontage() {
     crown.castShadow = true;
     crown.scale.y = 0.65;
     frontage.add(crown);
+    // Closed smooth crowns have no EdgesGeometry silhouette. Render an
+    // inverted hull for manga modes, outside the exported city group.
+    frontage.updateMatrixWorld(true);
+    const outline = new THREE.Mesh(
+      crown.geometry,
+      new THREE.MeshBasicMaterial({ color: 0x151519, side: THREE.BackSide }),
+    );
+    outline.matrixAutoUpdate = false;
+    outline.matrix
+      .copy(crown.matrixWorld)
+      .multiply(new THREE.Matrix4().makeScale(1.04, 1.04, 1.04));
+    comicContours.add(outline);
     const e = new THREE.LineSegments(
       new THREE.EdgesGeometry(crown.geometry, 35),
       new THREE.LineBasicMaterial({ color: 0x1d2720 }),
