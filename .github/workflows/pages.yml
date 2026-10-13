@@ -19,8 +19,10 @@ jobs:
     uses: ./.github/workflows/localize-runtime-assets.yml
   steam-qa:
     uses: ./.github/workflows/visual-qa.yml
+  location-qa:
+    uses: ./.github/workflows/location-qa.yml
   deploy:
-    needs: [steam-qa, runtime-assets]
+    needs: [steam-qa, runtime-assets, location-qa]
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
