@@ -46,6 +46,8 @@ export function makeTreeLOD(highRoot, lowRoot) {
       Math.round(camera.position.x / 8),
       Math.round(camera.position.y / 8),
       Math.round(camera.position.z / 8),
+      ...camera.getWorldDirection(new THREE.Vector3()).toArray().map(v=>Math.round(v*32)),
+      Math.round(camera.aspect*100),
     ].join(",");
     if (next === key) return false;
     key = next;

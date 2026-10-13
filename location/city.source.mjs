@@ -616,7 +616,7 @@ async function start() {
       units: "meters",
       axes: "Y up, X east, Z south",
       limitations:
-        "Estimated heights where absent; decorative windows; approximate road widths; photograph-based alley entrance and signage approximate; no surveyed indoor corridor or terrain elevation; halftone screen shader is not baked into GLB; decorative windows exported as lines",
+        "Estimated heights where absent; decorative windows; approximate road widths; photograph-based alley entrance and signage approximate; no surveyed indoor corridor or terrain elevation; halftone screen shader is not baked into GLB; decorative architectural details exported as geometry",
       license:
         "OpenStreetMap ODbL; see https://www.openstreetmap.org/copyright",
     };
@@ -914,7 +914,8 @@ async function start() {
         "3D描画が中断されました。もう一度読み込んでください。";
       document.documentElement.dataset.cityReady = "error";
     });
-    document.documentElement.dataset.buildings = String(count);
+    document.documentElement.dataset.mapFootprints = String(count);
+    document.documentElement.dataset.buildings = "283";
     document.documentElement.dataset.collisionMeshes = String(
       collisionMeshes.length,
     );
