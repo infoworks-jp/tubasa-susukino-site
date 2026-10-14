@@ -476,7 +476,7 @@ routePanels.push(
       [987, 461],
       [790, 464],
     ],
-    { depth: 0.4 },
+    { depth: 0.4, inkMask: 0.66 },
   ),
   entrance("Yokocho / pudding shop glass", [
     [621, 465],

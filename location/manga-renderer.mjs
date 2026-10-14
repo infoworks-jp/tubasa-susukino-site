@@ -98,7 +98,11 @@ export class MangaRenderer {
             vec3 dy=texture2D(colorMap,uv0+vec2(0.,pixel.y)).rgb-texture2D(colorMap,uv0-vec2(0.,pixel.y)).rgb;
             textureInk=max(textureInk,smoothstep(.14,.42,max(length(dx),length(dy))));
           }
-          float solid=detailed?1.-smoothstep(.12,.31,light):1.-smoothstep(.025,.09,light);
+          // The supplied entrance sign has coloured lettering with medium
+          // luminance. Its explicit mask preserves that lettering as solid ink
+          // while leaving the other photographed facades' tone curve unchanged.
+          // Source red-letter luminance: median .367, p90 .471; retain the antialiased fringe.
+          float solid=artwork>.64?1.-smoothstep(.35,.49,light):detailed?1.-smoothstep(.12,.31,light):1.-smoothstep(.025,.09,light);
           paper=vec3(1.);
           if(tone>.5){
             float density=detailed?clamp((.79-light)*.52,0.,.36):clamp((.85-light)*.43,0.,.32);

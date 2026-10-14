@@ -62,7 +62,7 @@ export async function addSurveyedFacades(
     g.setAttribute(
       "inkArtwork",
       new THREE.Float32BufferAttribute(
-        new Float32Array(pos.count).fill(0.6),
+        new Float32Array(pos.count).fill(panel.inkMask ?? 0.6),
         1,
       ),
     );
