@@ -167,6 +167,17 @@ for (const viewport of [
     ) <= 2500000,
     "far high-detail instances are removed from GPU draws, not merely shrunk",
   );
+  assert.equal(
+    await page.locator('[data-view="north"]').getAttribute("aria-pressed"),
+    "true",
+    "detailed street is the initial view",
+  );
+  assert.equal(
+    await page.evaluate(() =>
+      Number(document.documentElement.dataset.surveyedPanels),
+    ),
+    28,
+  );
   for (const mode of ["color", "line", "tone", "night"]) {
     await page.locator(`[data-mode="${mode}"]`).click();
     await page.waitForTimeout(250);
@@ -195,9 +206,28 @@ for (const viewport of [
         chromatic / sampled < 0.02,
         "artwork mask must not bypass monochrome for ordinary geometry",
       );
+      if (viewport.width === 1440) {
+        // A known unobstructed sky area in the north preset must remain paper
+        // white. Zero-radius halftone AA previously left dots even at density 0.
+        let ink = 0, pixels = 0;
+        for (let y = Math.floor(png.height * .07); y < png.height * .2; y++)
+          for (let x = Math.floor(png.width * .75); x < png.width * .85; x++) {
+            pixels++;
+            if (png.data[(y * png.width + x) * 4] < 250) ink++;
+          }
+        assert.ok(ink / pixels < .005, "empty sky has no residual halftone dots");
+      }
     }
   }
-  for (const view of ["crossing", "north", "street", "shop", "overview"]) {
+  for (const view of [
+    "entrance",
+    "crossing",
+    "north",
+    "signs",
+    "street",
+    "shop",
+    "overview",
+  ]) {
     await page.locator(`[data-view="${view}"]`).click();
     const state = await page.evaluate(() =>
       JSON.parse(document.documentElement.dataset.cameraState),
@@ -206,15 +236,23 @@ for (const viewport of [
       state.position[1] >= state.floor,
       "camera outside mapped buildings",
     );
-    if (view === "crossing" || view === "north")
+    if (["crossing", "north", "signs"].includes(view))
       assert.ok(
         state.floor <= 4.5 && state.position[1] <= 13,
         "street preset starts over ground, not on a roof edge",
       );
-    assert.ok(
-      Math.abs(state.label[0]) < 1 && Math.abs(state.label[1]) < 1,
-      "label remains inside viewport",
-    );
+    if (["shop", "overview"].includes(view)) {
+      assert.equal(state.labelVisible, true);
+      assert.ok(
+        Math.abs(state.label[0]) < 1 && Math.abs(state.label[1]) < 1,
+        "visible label remains inside viewport",
+      );
+    } else
+      assert.equal(
+        state.labelVisible,
+        false,
+        "street detail is not obscured by a clamped shop label",
+      );
     await page
       .locator(".stage")
       .screenshot({ path: `location-qa/${viewport.width}-${view}.png` });
@@ -334,13 +372,16 @@ for (const viewport of [
         "export contains the photograph-aligned entrance sign",
       );
       assert.ok(
-        json.images?.length >= 5,
-        "export preserves three manga textures and two PLATEAU photo atlases",
+        json.images?.length >= 6,
+        "export preserves two manga textures, two street photo atlases and two PLATEAU photo atlases",
       );
       for (const name of [
         "Nikka / corner facade",
-        "Asahi / corner advertisement",
-        "Toyoko Inn / south frontage",
+        "Asahi / billboard",
+        "SAMTY / west roof sign",
+        "West street / karaoke vertical sign",
+        "Brown brick / south facade",
+        "Toyoko Inn / south windows",
       ])
         assert.ok(
           json.nodes.some((n) => n.name === name),
@@ -349,10 +390,20 @@ for (const viewport of [
       const artwork = json.nodes.find((n) => n.extras?.artworkSources)?.extras;
       assert.equal(
         artwork?.artworkSources.length,
-        3,
+        4,
         "export retains all source photograph records",
       );
       assert.ok(artwork.artworkAttribution.includes("MIKI Yoshihito"));
+      assert.ok(artwork.artworkAttribution.includes("jegal gihwan"));
+      const photographed = json.nodes.find(
+        (n) => n.name === "Susukino / photographed street detail",
+      );
+      assert.equal(photographed.extras.panelCount, 28);
+      assert.equal(photographed.extras.sources.length, 2);
+      assert.equal(
+        json.nodes.filter((n) => n.extras?.measuredPhotoCorners).length,
+        28,
+      );
       const plateau = json.nodes.find(
         (n) => n.extras?.buildingCount === 85,
       )?.extras;

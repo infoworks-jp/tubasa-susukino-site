@@ -21,6 +21,7 @@ import {
   plateauCredit,
   plateauSource,
 } from "./plateau.mjs";
+import { addSurveyedFacades } from "./surveyed-facades.mjs";
 import { landmarks } from "./landmarks.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 const canvas = document.querySelector("#city"),
@@ -202,7 +203,7 @@ function render() {
     const rect = canvas.getBoundingClientRect(),
       anchor = new THREE.Vector3(shopXZ[0], 45, shopXZ[1]),
       screen = anchor.clone().project(camera);
-    if (screen.z < 1 && activeView !== "entrance") {
+    if (screen.z < 1 && ["overview", "shop"].includes(activeView)) {
       const w = Math.min(200, rect.width * 0.55),
         h = w / 4;
       screen.x = THREE.MathUtils.clamp(
@@ -238,6 +239,7 @@ function render() {
     target: controls.target.toArray(),
     floor: cameraFloor(camera.position.x, camera.position.z),
     label: shopLabel?.position.clone().project(camera).toArray(),
+    labelVisible: shopLabel?.visible ?? false,
   });
   if (mode === "tone" || mode === "line")
     mangaRenderer.render(scene, camera, mode, [comicContours]);
@@ -416,8 +418,11 @@ function view(name) {
       if (fits) break;
     }
   } else if (name === "north") {
-    controls.target.set(-23, 18, -75);
-    camera.position.set(aspect < 1 ? -92 : -85, 12, aspect < 1 ? 20 : -22);
+    controls.target.set(-43, 19, -75);
+    camera.position.set(aspect < 1 ? -92 : -109, 12, aspect < 1 ? 20 : -13);
+  } else if (name === "signs") {
+    controls.target.set(-59.5, 14, -63.4);
+    camera.position.set(aspect < 1 ? -89 : -90, 12, aspect < 1 ? -20 : -29);
   } else if (name === "street") {
     controls.target.set(-5, 15, -120);
     camera.position.set(
@@ -447,7 +452,7 @@ function view(name) {
   }
   // A photographed street viewpoint must not start on an exported roof edge.
   // Find the nearest unobstructed ground point before the collision guard runs.
-  if (name === "crossing" || name === "north") {
+  if (["crossing", "north", "signs"].includes(name)) {
     const desired = camera.position.clone();
     let found = cameraFloor(desired.x, desired.z) <= 4.5;
     for (let radius = 0.5; radius <= 12 && !found; radius += 0.5) {
@@ -463,12 +468,16 @@ function view(name) {
     }
   }
   controls.update();
-  document.querySelector(".scene-note b").textContent =
-    name === "entrance" ? "新ラーメン横丁 入口" : "味一番つばさ";
-  document.querySelector(".scene-note span").textContent =
-    name === "entrance"
-      ? "つばさは通路の一番奥 / B1F"
-      : "新ラーメン横丁の一番奥 / B1F";
+  const captions = {
+    north: ["すすきの交差点・北側", "看板・窓・外壁 / 2024年、一部2022年の写真"],
+    signs: ["看板と店先の細部", "写真の文字・窓割りを、そのまま街の面へ"],
+    crossing: ["すすきの交差点", "ニッカの看板から、新ラーメン横丁へ"],
+    street: ["すすきの・北側の街区", "PLATEAUの建物形状・外壁写真 / 2020年度"],
+    entrance: ["新ラーメン横丁 入口", "つばさは通路の一番奥 / B1F"],
+  };
+  const caption = captions[name] || ["味一番つばさ", "新ラーメン横丁の一番奥 / B1F"];
+  document.querySelector(".scene-note b").textContent = caption[0];
+  document.querySelector(".scene-note span").textContent = caption[1];
   document
     .querySelectorAll("[data-view]")
     .forEach((b) =>
@@ -771,6 +780,7 @@ async function start() {
     photoMaterials = [
       ...(await addPhotoFacade(frontage)),
       ...(await addIllustratedStreet(city)),
+      ...(await addSurveyedFacades(city)),
     ];
     city.userData.artworkSources = artworkSources;
     city.userData.artworkAttribution = artworkCredits;
@@ -800,7 +810,7 @@ async function start() {
       render();
     };
     new ResizeObserver(resize).observe(canvas);
-    view("entrance");
+    view("north");
     applyMode("tone");
     resize();
     buttons.forEach((b) => (b.disabled = false));
@@ -890,9 +900,10 @@ async function start() {
         ctx.font = "20px sans-serif";
         ctx.fillText(
           artworkCredits +
-            " / 漫画翻案・一部省略 / tubasa-susukino.com/location/artwork-sources.md",
+            " / 加工 / tubasa-susukino.com/location/artwork-sources.md",
           24,
           height + 115,
+          width - 48,
         );
         ctx.fillText(
           plateauCredit +

@@ -122,3 +122,10 @@ Policy: https://www.mlit.go.jp/plateau/site-policy/
 CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 Subset, coordinate conversion, ground flattening, lossless UV atlas repacking and runtime manga rendering. Source photography is historical and varies in resolution. See plateau-sources.md.
 Build-time Draco decoder: Apache License 2.0, https://github.com/google/draco
+
+North intersection photographic facade textures (2026-10-14 update):
+- assets/manga/north-photo-2024.webp: MIKI Yoshihito, Susukino Intersection, Sapporo - Mar 5, 2024. CC BY 2.0 https://creativecommons.org/licenses/by/2.0/
+  Source: https://commons.wikimedia.org/wiki/File:Susukino_Intersection,_Sapporo_-_Mar_5,_2024.jpg
+- assets/manga/asahi-base-2022.webp: jegal gihwan, a city street at night with cars and billboards, published 2022-12-18. Unsplash License https://unsplash.com/license
+  Source: https://unsplash.com/photos/a-city-street-at-night-with-cars-and-billboards-qsB8WZkPBZs
+Changes: lossless technical crops, facade perspective projection, shallow geometric relief, real-time monochrome/halftone conversion. No regenerated sign lettering. See artwork-sources.md for crop coordinates and limitations.

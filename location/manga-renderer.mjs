@@ -71,7 +71,9 @@ export class MangaRenderer {
           float density=clamp((.45-perceptual)*1.1,0.,.46);
           vec2 q=fract(gl_FragCoord.xy/pitch)-.5;
           float radius=sqrt(density/3.14159265);float a=max(fwidth(length(q)),.025);
-          float dotInk=1.-smoothstep(radius-a,radius+a,length(q));
+          // At zero density, AA around a zero-radius circle otherwise leaves
+          // grey dots across white sky/paper. Fade the coverage to actual zero.
+          float dotInk=(1.-smoothstep(radius-a,radius+a,length(q)))*smoothstep(0.,.025,density);
           paper=mix(vec3(1.),vec3(.008),dotInk);
           paper=mix(paper,vec3(.003),1.-smoothstep(.035,.16,l));
         }
@@ -84,16 +86,29 @@ export class MangaRenderer {
           float left=luminanceAt(uv0-vec2(pixel.x,0.)),right=luminanceAt(uv0+vec2(pixel.x,0.));
           float top=luminanceAt(uv0+vec2(0.,pixel.y)),bottom=luminanceAt(uv0-vec2(0.,pixel.y));
           float contrast=length(vec2(right-left,top-bottom));
-          float textureInk=smoothstep(.045,.18,contrast);
-          float solid=1.-smoothstep(.025,.09,light);
+          bool detailed=artwork>.5;
+          // Street photographs retain solid lettering and dark window recesses.
+          // A higher edge threshold rejects masonry noise instead of outlining
+          // every JPEG grain. Their finer tone is separate from the low-res atlas.
+          float textureInk=detailed?smoothstep(.08,.24,contrast):smoothstep(.045,.18,contrast);
+          if(detailed){
+            // White lettering on yellow/orange signs has little luminance
+            // contrast. Preserve its photographed colour boundary as fine ink.
+            vec3 dx=texture2D(colorMap,uv0+vec2(pixel.x,0.)).rgb-texture2D(colorMap,uv0-vec2(pixel.x,0.)).rgb;
+            vec3 dy=texture2D(colorMap,uv0+vec2(0.,pixel.y)).rgb-texture2D(colorMap,uv0-vec2(0.,pixel.y)).rgb;
+            textureInk=max(textureInk,smoothstep(.14,.42,max(length(dx),length(dy))));
+          }
+          float solid=detailed?1.-smoothstep(.12,.31,light):1.-smoothstep(.025,.09,light);
           paper=vec3(1.);
           if(tone>.5){
-            float density=clamp((.85-light)*.43,0.,.32);
-            vec2 q=fract(mat2(.866,-.5,.5,.866)*gl_FragCoord.xy/pitch)-.5;
+            float density=detailed?clamp((.79-light)*.52,0.,.36):clamp((.85-light)*.43,0.,.32);
+            float photoPitch=detailed?pitch*.56:pitch;
+            vec2 q=fract(mat2(.866,-.5,.5,.866)*gl_FragCoord.xy/photoPitch)-.5;
             float radius=sqrt(density/3.14159265),aa=max(fwidth(length(q)),.025);
-            paper=mix(vec3(1.),vec3(.006),1.-smoothstep(radius-aa,radius+aa,length(q)));
+            float dotInk=(1.-smoothstep(radius-aa,radius+aa,length(q)))*smoothstep(0.,.025,density);
+            paper=mix(vec3(1.),vec3(.006),dotInk);
           }
-          paper=mix(paper,vec3(.003),max(solid,textureInk*.9));
+          paper=mix(paper,vec3(.003),max(solid,textureInk*(detailed?.72:.9)));
         }
         if(d<far*.99) paper=mix(paper,base,step(.75,artwork));
         gl_FragColor=vec4(mix(paper,vec3(.004),edge*(1.-artwork*.8)),1.);

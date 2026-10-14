@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { loadArtwork, artworkPlane, outlinedBox } from "./artwork.mjs";
 export const artworkCredits =
-  "写真翻案: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0)";
+  "写真: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0), jegal gihwan (Unsplash)";
 export const artworkSources = [
   {
     author: "x768",
@@ -22,35 +22,72 @@ export const artworkSources = [
     url: "https://commons.wikimedia.org/wiki/File:Susukino_Intersection,_Sapporo_-_Mar_5,_2024.jpg",
     license: "https://creativecommons.org/licenses/by/2.0/",
   },
+  {
+    author: "jegal gihwan",
+    date: "2022-12-18 (publication)",
+    url: "https://unsplash.com/photos/a-city-street-at-night-with-cars-and-billboards-qsB8WZkPBZs",
+    license: "https://unsplash.com/license",
+  },
 ];
+// Map footprints; facade heights are documented approximations where no
+// survey is available. The Asahi chamfer is at the actual western corner.
 const northBuildings = [
   {
     ring: [
+      [-68.2, -82.6],
+      [-58.1, -84.3],
+      [-53.8, -61.2],
+      [-55.1, -60.8],
+      [-65.6, -66.9],
+    ],
+    height: 25.5,
+  },
+  {
+    ring: [
       [-57.7, -84.8],
-      [-43, -87.4],
-      [-39, -63.8],
-      [-44, -62.9],
-      [-56, -72.5],
+      [-30.7, -89.6],
+      [-26.7, -66.9],
+      [-53.8, -61.2],
     ],
     height: 19,
   },
   {
     ring: [
-      [-43, -87.4],
-      [-12.3, -92.8],
-      [-8.2, -69.1],
-      [-39, -63.8],
+      [-13.2, -92.6],
+      [-8.8, -69.1],
+      [-25.9, -66],
+      [-28.5, -80.4],
+      [-21.1, -81.7],
+      [-22.8, -90.9],
     ],
-    height: 22,
+    height: 33,
   },
   {
     ring: [
-      [-6, -97.7],
-      [30.7, -104],
-      [34.8, -81.1],
-      [-1.9, -74.8],
+      [-12.3, -93.1],
+      [-4.5, -94.8],
+      [-0.1, -71.2],
+      [-8.4, -69.9],
     ],
-    height: 46,
+    height: 37,
+  },
+  {
+    ring: [
+      [-1.9, -95.7],
+      [30.4, -101.3],
+      [34.8, -79.5],
+      [2.5, -73.4],
+    ],
+    height: 52,
+  },
+  {
+    ring: [
+      [-64.3, -119.7],
+      [-60.3, -95.7],
+      [-70.4, -94.4],
+      [-74.7, -117.5],
+    ],
+    height: 28.5,
   },
 ];
 // Replace the procedural north-side masses as well as their windows. Otherwise
@@ -69,7 +106,9 @@ export function refineLandmarkMasses(mesh) {
     let replaced = false;
     for (let j = 0; j < 3; j++) {
       p.fromBufferAttribute(pos, i + j).applyMatrix4(mesh.matrixWorld);
-      replaced ||= p.x > -62 && p.x < 43 && p.z > -108 && p.z < -57;
+      replaced ||=
+        (p.x > -73 && p.x < 43 && p.z > -108 && p.z < -57) ||
+        (p.x > -76 && p.x < -57 && p.z > -121 && p.z < -92);
     }
     if (!replaced) keep.push(i, i + 1, i + 2);
   }
@@ -163,10 +202,7 @@ export async function addIllustratedStreet(city) {
       "Nikka artwork CC BY-SA 4.0; north artwork CC BY 4.0. See artwork-sources.md.",
   };
   city.add(group);
-  const [nikka, north] = await Promise.all([
-    loadArtwork("./assets/manga/nikka-facade.webp"),
-    loadArtwork("./assets/manga/north-facades.webp"),
-  ]);
+  const nikka = await loadArtwork("./assets/manga/nikka-facade.webp");
   const materials = [];
   // a is the image-left corner viewed from the street. Each plane follows an
   // actual footprint edge. Textures are never repeated across unrelated blocks.
@@ -245,48 +281,6 @@ export async function addIllustratedStreet(city) {
     [-54.2, 21.3],
     27.2,
     7.2,
-    1.1,
-  );
-  // Photo-identified north-side sequence: Asahi corner, brown low commercial
-  // building, Toyoko Inn. Ground lines align to the map; absolute heights approximate.
-  face(
-    "Asahi / corner advertisement",
-    north,
-    [155, 8, 498, 453],
-    [-56, -72.5],
-    [-44, -62.9],
-    12,
-    19,
-    1.1,
-  );
-  face(
-    "North block / brown brick frontage",
-    north,
-    [499, 188, 1312, 639],
-    [-39, -63.8],
-    [-8.2, -69.1],
-    4,
-    18,
-    1.1,
-  );
-  face(
-    "Toyoko Inn / south frontage",
-    north,
-    [1500, 10, 1950, 777],
-    [-1.9, -74.8],
-    [34.8, -81.1],
-    0,
-    46,
-    1.1,
-  );
-  face(
-    "Toyoko Inn / west frontage",
-    north,
-    [1320, 10, 1730, 777],
-    [-6, -97.7],
-    [-1.9, -74.8],
-    0,
-    46,
     1.1,
   );
   return materials;
