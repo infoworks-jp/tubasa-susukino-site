@@ -2,6 +2,7 @@ import { chromium } from "playwright";
 import { PNG } from "pngjs";
 import fs from "node:fs/promises";
 import assert from "node:assert/strict";
+import { verifyProgressiveLoading } from "./location-loading-qa.mjs";
 const browser = await chromium.launch({
   executablePath: process.env.LOCATION_QA_EXECUTABLE || undefined,
   args:
@@ -99,6 +100,7 @@ try {
   );
   referenceError = e;
 }
+await verifyProgressiveLoading(browser, base, "location-qa");
 for (const viewport of [
   { width: 1440, height: 1000 },
   { width: 390, height: 844 },
@@ -662,14 +664,17 @@ await page.route("**/assets/plateau/data44.glb", (route) =>
   route.fulfill({ status: 503, body: "unavailable" }),
 );
 await page.reload();
-await page.locator("#failure").waitFor({ state: "visible" });
+await page.locator("#detail-retry").waitFor({ state: "visible" });
+assert.equal(await page.locator("#failure").isVisible(), false);
+assert.equal(await page.locator("#png").isEnabled(), false);
+assert.equal(await page.locator('[data-view="entrance"]').isEnabled(), true);
 assert.equal(
   await page.locator("#glb").isEnabled(),
   false,
   "missing photographed geometry must fail closed",
 );
 await page.unroute("**/assets/plateau/data44.glb");
-await page.locator("#retry").click();
+await page.locator("#detail-retry button").click();
 await page.waitForFunction(
   () => document.documentElement.dataset.cityReady === "true",
 );

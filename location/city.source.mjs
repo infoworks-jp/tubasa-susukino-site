@@ -31,6 +31,9 @@ import { addSurveyedFacades } from "./surveyed-facades.mjs";
 import { addRouteArchitecture } from "./route-architecture.mjs";
 import { landmarks } from "./landmarks.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+performance.mark("city-load-start");
+const yieldToBrowser = () => new Promise((resolve) => setTimeout(resolve, 0));
+let detailState = "loading";
 const canvas = document.querySelector("#city"),
   status = document.querySelector("#status");
 const buttons = [
@@ -40,6 +43,7 @@ buttons.forEach((b) => (b.disabled = true));
 document
   .querySelector("#retry")
   .addEventListener("click", () => location.reload());
+document.querySelector("#detail-retry button").addEventListener("click", () => location.reload());
 const center = [141.354277879, 43.055365148368],
   metersLon = 111320 * Math.cos((center[1] * Math.PI) / 180),
   limit = 210;
@@ -344,7 +348,9 @@ function describeMode() {
     ] +
     (activeView === "entrance"
       ? " · 横丁入口（つばさは通路の奥）"
-      : " · すすきの / つばさ周辺");
+      : " · すすきの / つばさ周辺") +
+    (detailState === "loading" ? " · 周辺の外壁を読み込み中（操作できます）"
+      : detailState === "error" ? " · 周辺の読み込みに失敗しました" : "");
 }
 function applyMode(next) {
   mode = next;
@@ -742,14 +748,21 @@ async function start() {
         count++;
       }
     }
-    status.textContent = "詳細な街区モデルを読み込み中…";
+    status.textContent = "交差点と横丁入口を読み込み中…";
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-    const imported = await loader.loadAsync(
-      "./susukino-detail.glb",
-      (event) => {
-        status.textContent = `詳細な街区モデルを読み込み中… ${Math.round(event.loaded / 1024 / 1024)} MB`;
-      },
-    );
+    addFrontage();
+    // Only the arrival route competes for initial bandwidth. Independent core
+    // resources start together; photographic surroundings are a second stage.
+    const [imported, lowTrees, ...coreArtwork] = await Promise.all([
+      loader.loadAsync("./susukino-detail.glb"),
+      loader.loadAsync("./susukino-trees-low.glb"),
+      addPhotoFacade(frontage),
+      addIllustratedStreet(city),
+      addSurveyedFacades(city, routePanels, routeAtlases,
+        "Susukino / Route 36 to Yokocho"),
+    ]);
+    photoMaterials = coreArtwork.flat();
+    performance.mark("city-core-downloaded");
     imported.scene.name = "Susukino / permitted Rokehan GLB output";
     imported.scene.userData = {
       source: "https://oyasumi-gamedev.com/tools/rokehan/",
@@ -758,20 +771,12 @@ async function start() {
       limitations:
         "Procedural facades, signs and roof equipment are not surveyed real architecture",
     };
-    status.textContent = "写真付きの建物85棟を読み込み中…";
-    const plateau = await loadPlateau(
-      loader,
-      streetClipPlanes.map((p) => new THREE.Plane(p.normal, 235)),
-    );
-    plateauMaterials = plateau.materials;
-    let replacedTriangles = 0;
     imported.scene.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = true;
       o.receiveShadow = true;
       if (o.name === "buildings" || o.name === "buildingsDetail") {
         refineLandmarkMasses(o);
-        replacedTriangles += replaceProceduralMasses(o, plateau.features);
         computeBoundsTree.call(o.geometry);
         o.raycast = acceleratedRaycast;
         collisionMeshes.push(o);
@@ -817,7 +822,6 @@ async function start() {
     // The exported tool distributes decorative trees, not surveyed trees. Omit
     // these throughout the illustrated intersection so they cannot conceal signs.
     obstructingTrees.forEach((o) => o.removeFromParent());
-    const lowTrees = await loader.loadAsync("./susukino-trees-low.glb");
     lowTrees.scene.traverse((o) => {
       if (!o.isMesh) return;
       // Singleton trees already exist in the detailed model; do not overlay a second copy.
@@ -838,31 +842,6 @@ async function start() {
     city.add(lowTrees.scene);
     updateTreeLOD = makeTreeLOD(imported.scene, lowTrees.scene);
     city.add(imported.scene);
-    city.add(plateau.group);
-    plateau.group.traverse((o) => {
-      if (!o.isMesh) return;
-      computeBoundsTree.call(o.geometry);
-      o.raycast = acceleratedRaycast;
-      collisionMeshes.push(o);
-    });
-    city.userData.plateau = plateauSource;
-    document.documentElement.dataset.plateauBuildings = String(
-      plateau.features.length,
-    );
-    document.documentElement.dataset.plateauReplacedTriangles =
-      String(replacedTriangles);
-    addFrontage();
-    photoMaterials = [
-      ...(await addPhotoFacade(frontage)),
-      ...(await addIllustratedStreet(city)),
-      ...(await addSurveyedFacades(city)),
-      ...(await addSurveyedFacades(
-        city,
-        routePanels,
-        routeAtlases,
-        "Susukino / Route 36 to Yokocho",
-      )),
-    ];
     const routeArchitecture = addRouteArchitecture(city, imported.scene);
     routeArchitecture.materials.forEach((m) => {
       m.userData.dayColor = m.color.getHex();
@@ -914,7 +893,7 @@ async function start() {
     view("route");
     applyMode("tone");
     resize();
-    buttons.forEach((b) => (b.disabled = false));
+    buttons.forEach((b) => (b.disabled = b.id === "png" || b.id === "glb"));
     document
       .querySelectorAll("[data-mode]")
       .forEach((b) =>
@@ -1056,7 +1035,6 @@ async function start() {
         b.disabled = false;
       }
     });
-    document.documentElement.dataset.cityReady = "true";
     canvas.addEventListener("webglcontextlost", (e) => {
       e.preventDefault();
       buttons.forEach((b) => (b.disabled = true));
@@ -1064,23 +1042,73 @@ async function start() {
       status.textContent =
         "3D描画が中断されました。もう一度読み込んでください。";
       document.documentElement.dataset.cityReady = "error";
+      document.documentElement.dataset.cityInteractive = "false";
     });
     document.documentElement.dataset.mapFootprints = String(count);
     document.documentElement.dataset.buildings = "283";
-    document.documentElement.dataset.collisionMeshes = String(
-      collisionMeshes.length,
-    );
     document.documentElement.dataset.detailSource = "rokehan-permitted-glb";
-    let totalVertices = 0;
-    city.traverse((o) => {
-      if (o.isMesh) totalVertices += o.geometry.attributes.position?.count ?? 0;
-    });
-    document.documentElement.dataset.geometryVertices = String(totalVertices);
+    // Let the first real 3D frame paint before requesting the surroundings.
+    await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+    if (renderer.getContext().isContextLost()) return;
+    document.documentElement.dataset.cityInteractive = "true";
+    performance.mark("city-interactive");
+    try {
+      const north = new THREE.Group();
+      const [plateau, northMaterials] = await Promise.all([
+        loadPlateau(loader, streetClipPlanes.map((p) => new THREE.Plane(p.normal, 235))),
+        addSurveyedFacades(north),
+      ]);
+      performance.mark("city-surroundings-downloaded");
+      // Prepare off-scene before replacing the provisional map buildings.
+      const meshes = [];
+      plateau.group.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      for (const mesh of meshes) {
+        computeBoundsTree.call(mesh.geometry);
+        mesh.raycast = acceleratedRaycast;
+        await yieldToBrowser();
+      }
+      if (renderer.getContext().isContextLost()) return;
+      let replacedTriangles = 0;
+      imported.scene.traverse((o) => {
+        if (!["buildings", "buildingsDetail"].includes(o.name)) return;
+        replacedTriangles += replaceProceduralMasses(o, plateau.features);
+        computeBoundsTree.call(o.geometry);
+      });
+      city.add(plateau.group);
+      for (const group of [...north.children]) city.add(group);
+      collisionMeshes.push(...meshes);
+      floorCache.x = NaN;
+      plateauMaterials = plateau.materials;
+      photoMaterials.push(...northMaterials);
+      city.userData.plateau = plateauSource;
+      document.documentElement.dataset.plateauBuildings = String(plateau.features.length);
+      document.documentElement.dataset.plateauReplacedTriangles = String(replacedTriangles);
+      document.documentElement.dataset.collisionMeshes = String(collisionMeshes.length);
+      let totalVertices = 0;
+      city.traverse((o) => {
+        if (o.isMesh) totalVertices += o.geometry.attributes.position?.count ?? 0;
+      });
+      document.documentElement.dataset.geometryVertices = String(totalVertices);
+      detailState = "ready";
+      renderer.shadowMap.needsUpdate = true;
+      applyMode(mode); // Keep the user's current camera and chosen drawing mode.
+      document.querySelector("#png").disabled = false;
+      document.querySelector("#glb").disabled = false;
+      document.documentElement.dataset.cityReady = "true";
+      performance.mark("city-complete");
+    } catch (error) {
+      console.warn("[Tsubasa Location surroundings]", error);
+      detailState = "error";
+      describeMode();
+      document.documentElement.dataset.cityReady = "partial";
+      document.querySelector("#detail-retry").hidden = false;
+    }
   } catch (error) {
     console.error("[Tsubasa Location]", error);
     document.querySelector("#failure").hidden = false;
     status.textContent = "3D表示を開始できませんでした";
     document.documentElement.dataset.cityReady = "error";
+    document.documentElement.dataset.cityInteractive = "false";
   }
 }
 start();

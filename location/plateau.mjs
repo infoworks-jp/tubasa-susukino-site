@@ -93,8 +93,10 @@ export async function loadPlateau(loader, clippingPlanes) {
   group.userData = { ...plateauSource };
   const features = [],
     materials = [];
-  for (const name of ["data30", "data44"]) {
-    const result = await loader.loadAsync("./assets/plateau/" + name + ".glb");
+  const tiles = await Promise.all(["data30", "data44"].map(
+    (name) => loader.loadAsync("./assets/plateau/" + name + ".glb"),
+  ));
+  for (const result of tiles) {
     features.push(...result.userData.buildings);
     result.scene.traverse((o) => {
       if (!o.isMesh) return;

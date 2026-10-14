@@ -219,6 +219,9 @@ assert.ok(
 );
 const { pavementProfile } = await import("../location/route-architecture.mjs");
 const pavement = pavementProfile(gltf.scene);
+const { default: cachedPavement } = await import("../location/pavement.generated.mjs");
+assert.deepEqual(cachedPavement, pavement,
+  "precomputed pavement preserves every original map sample exactly");
 for (let i = 1; i < pavement.samples.length; i++) {
   const a = pavement.samples[i - 1],
     b = pavement.samples[i];
