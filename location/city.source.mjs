@@ -409,12 +409,8 @@ function view(name) {
     controls.target.set(-23, 18, -75);
     camera.position.set(aspect < 1 ? -92 : -85, 12, aspect < 1 ? 20 : -22);
   } else if (name === "crossing") {
-    controls.target.set(-36, 13, -8);
-    camera.position.set(
-      aspect < 1 ? -100 : -102,
-      aspect < 1 ? 10 : 8,
-      aspect < 1 ? -108 : -65,
-    );
+    controls.target.set(aspect < 1 ? -49 : -36, aspect < 1 ? 16 : 13, -8);
+    camera.position.set(-85, aspect < 1 ? 10 : 8, -47);
   } else {
     if (name === "entrance") {
       controls.target.set(
@@ -430,6 +426,23 @@ function view(name) {
     } else {
       controls.target.set(shopXZ[0], 16, shopXZ[1]);
       camera.position.set(shopXZ[0] + 75, 100, shopXZ[1] + 100);
+    }
+  }
+  // A photographed street viewpoint must not start on an exported roof edge.
+  // Find the nearest unobstructed ground point before the collision guard runs.
+  if (name === "crossing" || name === "north") {
+    const desired = camera.position.clone();
+    let found = cameraFloor(desired.x, desired.z) <= 4.5;
+    for (let radius = 0.5; radius <= 12 && !found; radius += 0.5) {
+      for (let i = 0; i < 16; i++) {
+        const x = desired.x + Math.cos((i * Math.PI) / 8) * radius;
+        const z = desired.z + Math.sin((i * Math.PI) / 8) * radius;
+        if (cameraFloor(x, z) <= 4.5) {
+          camera.position.set(x, desired.y, z);
+          found = true;
+          break;
+        }
+      }
     }
   }
   controls.update();

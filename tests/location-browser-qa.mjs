@@ -194,6 +194,11 @@ for (const viewport of [
       state.position[1] >= state.floor,
       "camera outside mapped buildings",
     );
+    if (view === "crossing" || view === "north")
+      assert.ok(
+        state.floor <= 4.5 && state.position[1] <= 13,
+        "street preset starts over ground, not on a roof edge",
+      );
     assert.ok(
       Math.abs(state.label[0]) < 1 && Math.abs(state.label[1]) < 1,
       "label remains inside viewport",
