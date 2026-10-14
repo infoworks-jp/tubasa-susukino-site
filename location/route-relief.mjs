@@ -217,37 +217,43 @@ export function configureRouteRelief(panels) {
     { rect: [0.43, 0.04, 0.72, 0.96], depth: 0.07, label: "middle sign case" },
     { rect: [0.74, 0.04, 0.98, 0.96], depth: 0.18, label: "right sign case" },
   ];
-  p = get("No.3 / Big Echo and Torikizoku");
+  p = get("No.3 / continuous photographed frontage");
+  // Actual sign corners in the 1824 × 1368 photo. Keep the quadrilaterals;
+  // axis-aligned guessed boxes sliced through lettering and made false ledges.
   p.relief = [
     {
-      rect: [0.015, 0.025, 0.39, 0.975],
+      photoCorners: [
+        [176, 884],
+        [286, 855],
+        [276, 939],
+        [158, 968],
+      ],
       depth: 0.3,
       label: "Big Echo sign case",
     },
     {
-      rect: [0.41, 0.025, 0.665, 0.975],
-      depth: 0.12,
-      label: "central sign case",
-    },
-    {
-      rect: [0.69, 0.025, 0.98, 0.975],
-      depth: 0.42,
-      label: "vertical sign case",
-    },
-  ];
-  p = get("No.3 / northern wall sign stack");
-  p.relief = [
-    { rect: [0.015, 0.025, 0.315, 0.55], depth: 0.19, label: "left sign case" },
-    {
-      rect: [0.34, 0.025, 0.72, 0.55],
+      photoCorners: [
+        [280, 952],
+        [383, 928],
+        [362, 1081],
+        [260, 1091],
+      ],
       depth: 0.29,
-      label: "central sign case",
+      label: "PROMISE sign case",
     },
     {
-      rect: [0.77, 0.02, 0.97, 0.98],
-      depth: 0.54,
-      label: "projecting vertical case",
+      photoCorners: [
+        [440, 799],
+        [497, 776],
+        [448, 1157],
+        [399, 1165],
+      ],
+      depth: 0.42,
+      label: "continuous vertical sign case",
     },
-  ];
+  ].map((r) => ({
+    ...r,
+    polygon: r.photoCorners.map((pt) => unprojectPhoto(p.q, pt)),
+  }));
   return panels;
 }

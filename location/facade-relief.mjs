@@ -5,6 +5,8 @@ import { projectQuad, atlasUV } from "./facade-projection.mjs";
 // Fronts keep the exact source-photo UVs; perpendicular reveals are real geometry.
 // Recesses never go through the mapped building body (checked in QA).
 export function makeReliefGeometry(panel, atlas) {
+  if (panel.relief?.some((r) => r.polygon))
+    return makePolygonRelief(panel, atlas);
   const width = Math.hypot(panel.b[0] - panel.a[0], panel.b[1] - panel.a[1]);
   const height = panel.height,
     relief = panel.relief || [];
@@ -110,6 +112,85 @@ export function makeReliefGeometry(panel, atlas) {
   geometry.computeVertexNormals();
   const reveals = new THREE.BufferGeometry();
   reveals.setAttribute("position", new THREE.Float32BufferAttribute(sides, 3));
+  reveals.computeVertexNormals();
+  return { geometry, reveals };
+}
+
+// A continuous photo registration with holes at measured sign silhouettes.
+// Subdivision keeps projective UVs accurate on the large background triangles.
+function makePolygonRelief(panel, atlas) {
+  const width = Math.hypot(panel.b[0] - panel.a[0], panel.b[1] - panel.a[1]);
+  const fronts = [],
+    uvs = [],
+    sides = [];
+  const outer = [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ];
+  const polygons = panel.relief.map((r) => r.polygon);
+  const points = [...outer, ...polygons.flat()];
+  const xy = (p) => new THREE.Vector2(...p);
+  const vertex = ([u, v], z) => [
+    (u - 0.5) * width,
+    (0.5 - v) * panel.height,
+    z,
+  ];
+  function triangle(a, b, c, z, level = 0) {
+    if (level < 5) {
+      const mid = (a, b) => a.map((v, i) => (v + b[i]) / 2);
+      const ab = mid(a, b),
+        bc = mid(b, c),
+        ca = mid(c, a);
+      triangle(a, ab, ca, z, level + 1);
+      triangle(ab, b, bc, z, level + 1);
+      triangle(ca, bc, c, z, level + 1);
+      triangle(ab, bc, ca, z, level + 1);
+      return;
+    }
+    for (const p of [a, c, b]) {
+      fronts.push(...vertex(p, z));
+      uvs.push(...atlasUV(projectQuad(panel.q, ...p), atlas));
+    }
+  }
+  for (const ids of THREE.ShapeUtils.triangulateShape(
+    outer.map(xy),
+    polygons.map((p) => p.map(xy)),
+  ))
+    triangle(...ids.map((i) => points[i]), 0);
+  for (const r of panel.relief) {
+    for (const ids of THREE.ShapeUtils.triangulateShape(r.polygon.map(xy), []))
+      triangle(...ids.map((i) => r.polygon[i]), r.depth);
+    r.polygon.forEach((a, i) => {
+      const b = r.polygon[(i + 1) % r.polygon.length];
+      for (const [p, z] of [
+        [a, 0],
+        [b, 0],
+        [b, r.depth],
+        [a, 0],
+        [b, r.depth],
+        [a, r.depth],
+      ])
+        sides.push(...vertex(p, z));
+    });
+  }
+  const geometry = new THREE.BufferGeometry(),
+    reveals = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(fronts, 3),
+  );
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute(
+    "inkArtwork",
+    new THREE.Float32BufferAttribute(
+      new Float32Array(fronts.length / 3).fill(panel.inkMask ?? 0.6),
+      1,
+    ),
+  );
+  reveals.setAttribute("position", new THREE.Float32BufferAttribute(sides, 3));
+  geometry.computeVertexNormals();
   reveals.computeVertexNormals();
   return { geometry, reveals };
 }

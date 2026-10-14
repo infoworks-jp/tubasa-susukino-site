@@ -182,12 +182,12 @@ for (const viewport of [
     await page.evaluate(() =>
       Number(document.documentElement.dataset.routePanels),
     ),
-    30,
+    27,
   );
   assert.ok(
     Number(
       await page.evaluate(() => document.documentElement.dataset.routeRelief),
-    ) === 11,
+    ) === 10,
     "route has real window/reveal geometry, not only flat photo panels",
   );
   const pavement = await page.evaluate(() =>
@@ -278,6 +278,60 @@ for (const viewport of [
         state.floor <= 4.5 && state.position[1] <= 13,
         "street preset starts over ground, not on a roof edge",
       );
+    if (view === "shop") {
+      assert.ok(
+        Math.abs(state.guideScreen[0]) < 0.8 &&
+          Math.abs(state.guideScreen[1]) < 0.8,
+        "entrance sign stays in view",
+      );
+      assert.ok(
+        state.floor <= 4.5 && state.position[1] <= 10,
+        "entrance guide approaches from street, not behind building",
+      );
+      assert.ok(
+        await page
+          .locator(".scene-note")
+          .innerText()
+          .then((t) => t.includes("通路の一番奥")),
+      );
+      await page.locator('[data-mode="tone"]').click();
+      const guideImage = PNG.sync.read(
+        await page.locator("#city").screenshot({
+          path: `location-qa/${viewport.width}-entrance-guide.png`,
+          style: ".stage > :not(#city) { visibility: hidden !important; }",
+        }),
+      );
+      const greenBounds = [guideImage.width, guideImage.height, 0, 0];
+      let greenPixels = 0;
+      for (let y = 0; y < guideImage.height; y++)
+        for (let x = 0; x < guideImage.width; x++) {
+          const i = (y * guideImage.width + x) * 4;
+          const [r, g, b] = guideImage.data.subarray(i, i + 3);
+          if (g - r > 25 && g - b > 20) {
+            greenPixels++;
+            greenBounds[0] = Math.min(greenBounds[0], x);
+            greenBounds[1] = Math.min(greenBounds[1], y);
+            greenBounds[2] = Math.max(greenBounds[2], x);
+            greenBounds[3] = Math.max(greenBounds[3], y);
+          }
+        }
+      const endpoint = [
+        ((state.guideScreen[0] + 1) * guideImage.width) / 2,
+        ((1 - state.guideScreen[1]) * guideImage.height) / 2,
+      ];
+      assert.ok(greenPixels > 30, "entrance guide has visible green sign");
+      assert.ok(
+        endpoint[0] >= greenBounds[0] - 2 &&
+          endpoint[0] <= greenBounds[2] + 2 &&
+          endpoint[1] >= greenBounds[1] - 2 &&
+          endpoint[1] <= greenBounds[3] + 2,
+        "guide endpoint lands inside the rendered green sign",
+      );
+      await fs.writeFile(
+        `location-qa/${viewport.width}-guide-pixels.json`,
+        JSON.stringify({ greenBounds, endpoint, label: state.label }, null, 2),
+      );
+    }
     if (["shop", "overview"].includes(view)) {
       assert.equal(state.labelVisible, true);
       assert.ok(
@@ -480,17 +534,17 @@ for (const viewport of [
       assert.equal(photographed.extras.sources.length, 2);
       assert.equal(
         json.nodes.filter((n) => n.extras?.measuredPhotoCorners).length,
-        58,
+        55,
       );
       const route = json.nodes.find(
         (n) => n.name === "Susukino / Route 36 to Yokocho",
       );
-      assert.equal(route.extras.panelCount, 30);
+      assert.equal(route.extras.panelCount, 27);
       assert.equal(route.extras.sources.length, 3);
       for (const name of [
         "No.2 / Maruhan roof sign",
         "Koban / POLICE and wall lettering",
-        "No.3 / Sapporo roof billboard",
+        "No.3 / continuous photographed frontage",
       ])
         assert.ok(json.nodes.some((n) => n.name === name));
       assert.ok(
@@ -542,6 +596,16 @@ for (const viewport of [
         .landmarks;
       assert.deepEqual(landmark.shop.coordinates, [141.3544949, 43.055336]);
       assert.equal(landmark.shop.floor, "B1F");
+      const guide = json.nodes.find(
+        (n) =>
+          n.name === "Tsubasa wayfinding / Shin Ramen Yokocho entrance sign",
+      );
+      assert.deepEqual(
+        guide.extras.coordinates,
+        landmark.entrance.coordinates,
+        "guide belongs to entrance, separate from restaurant fact",
+      );
+      assert.ok(guide.extras.role.includes("far end"));
       assert.ok(
         json.nodes.some((n) => n.name?.includes("photograph-based entrance")),
       );

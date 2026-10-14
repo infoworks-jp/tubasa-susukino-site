@@ -105,10 +105,12 @@ console.log(
 // including its quantized attributes/transforms, instead of a mock footprint.
 const THREE = await import("three");
 const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
-const { MeshoptDecoder } =
-  await import("three/addons/libs/meshopt_decoder.module.js");
-const { refineLandmarkMasses } =
-  await import("../location/illustrated-street.mjs");
+const { MeshoptDecoder } = await import(
+  "three/addons/libs/meshopt_decoder.module.js"
+);
+const { refineLandmarkMasses } = await import(
+  "../location/illustrated-street.mjs"
+);
 const raw = await fs.readFile(
   new URL("../location/susukino-detail.glb", import.meta.url),
 );
@@ -259,4 +261,82 @@ assert.equal(
 );
 console.log(
   `PASS: ${recessedOpenings} real recessed openings, perpendicular returns, ${pavement.samples.length} mapped pavement stations and single sign colour mask`,
+);
+
+// Regression: a photographed vertical sign must not be stretched independently
+// at floor boundaries. No.3 uses one registration and measured polygon edges.
+const no3 = routePanels.filter((p) => p.name.startsWith("No.3 /"));
+assert.equal(
+  no3.length,
+  1,
+  "No.3 sign stack has one continuous photo registration",
+);
+for (const feature of no3[0].relief) {
+  assert.equal(feature.polygon.length, 4);
+  feature.polygon.forEach(([u, v], i) => {
+    const pt = projectQuad(no3[0].q, u, v);
+    assert.ok(
+      Math.hypot(
+        pt[0] - feature.photoCorners[i][0],
+        pt[1] - feature.photoCorners[i][1],
+      ) < 0.01,
+      "case edge follows measured sign, not guessed rectangle",
+    );
+  });
+}
+console.log(
+  "PASS: unbroken No.3 registration and photo-measured sign-case polygons",
+);
+
+const registered = no3[0];
+for (const feature of registered.relief)
+  assert.ok(
+    feature.polygon.flat().every((v) => v > 0 && v < 1),
+    "sign cases fit inside shared photo plane",
+  );
+const continuous = makeReliefGeometry(registered, registered.atlas);
+const registeredMesh = new THREE.Mesh(
+  continuous.geometry,
+  new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+);
+const registeredWidth = Math.hypot(
+  registered.b[0] - registered.a[0],
+  registered.b[1] - registered.a[1],
+);
+function insidePolygon(u, v, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i],
+      b = polygon[j];
+    if (
+      a[1] > v !== b[1] > v &&
+      u < ((b[0] - a[0]) * (v - a[1])) / (b[1] - a[1]) + a[0]
+    )
+      inside = !inside;
+  }
+  return inside;
+}
+for (let y = 0; y < 24; y++)
+  for (let x = 0; x < 24; x++) {
+    const u = (x + 0.37) / 24,
+      v = (y + 0.61) / 24;
+    const depth =
+      registered.relief.find((r) => insidePolygon(u, v, r.polygon))?.depth || 0;
+    ray.set(
+      new THREE.Vector3(
+        (u - 0.5) * registeredWidth,
+        (0.5 - v) * registered.height,
+        2,
+      ),
+      new THREE.Vector3(0, 0, -1),
+    );
+    const hits = ray.intersectObject(registeredMesh);
+    assert.ok(hits.length > 0, "continuous wall has no triangulation holes");
+    assert.ok(
+      hits.every((h) => Math.abs(h.distance - (2 - depth)) < 1e-5),
+      "no duplicate flat image behind raised sign",
+    );
+  }
+console.log(
+  "PASS: 576 rays verify a continuous wall and correctly cut sign silhouettes",
 );

@@ -44,8 +44,22 @@ const center = [141.354277879, 43.055365148368],
   metersLon = 111320 * Math.cos((center[1] * Math.PI) / 180),
   limit = 210;
 const xy = (p) => [(p[0] - center[0]) * metersLon, (p[1] - center[1]) * 111320];
-const shopXZ = xy(landmarks.shop.coordinates).map((v, i) => (i ? -v : v)),
-  entryXZ = xy(landmarks.entrance.coordinates).map((v, i) => (i ? -v : v));
+const entryXZ = xy(landmarks.entrance.coordinates).map((v, i) => (i ? -v : v));
+// The visitor guide points to the actual rendered green sign. Restaurant
+// coordinates remain a separate fact in landmarks and the locator diagram.
+const guideSign = routePanels.find(
+  (p) => p.name === "Photograph: Shin Ramen Yokocho sign",
+);
+const guideNormal = new THREE.Vector3(
+  -(guideSign.b[1] - guideSign.a[1]),
+  0,
+  guideSign.b[0] - guideSign.a[0],
+).normalize();
+const guidePoint = new THREE.Vector3(
+  (guideSign.a[0] + guideSign.b[0]) / 2,
+  guideSign.bottom + guideSign.height / 2,
+  (guideSign.a[1] + guideSign.b[1]) / 2,
+).addScaledVector(guideNormal, guideSign.offset + guideSign.depth + 0.03);
 function clipRing(input) {
   let ring = input.map(xy);
   for (const [axis, bound, sign] of [
@@ -103,6 +117,8 @@ const collisionMeshes = [],
   frontMaterials = [],
   referenceMaterials = [];
 let shopLabel,
+  guideLeader,
+  guideMarker,
   comicContours,
   frontage,
   entryMarker,
@@ -208,11 +224,12 @@ function render() {
   camera.updateMatrixWorld();
   if (shopLabel) {
     const rect = canvas.getBoundingClientRect(),
-      anchor = new THREE.Vector3(shopXZ[0], 45, shopXZ[1]),
+      anchor = guidePoint.clone(),
       screen = anchor.clone().project(camera);
     if (screen.z < 1 && ["overview", "shop"].includes(activeView)) {
       const w = Math.min(200, rect.width * 0.55),
         h = w / 4;
+      screen.y += 140 / rect.height;
       screen.x = THREE.MathUtils.clamp(
         screen.x,
         -1 + (w + 20) / rect.width,
@@ -233,7 +250,15 @@ function render() {
         rect.height;
       shopLabel.scale.set(w * units, h * units, 1);
       shopLabel.visible = true;
+      const foot = shopLabel.position.clone().project(camera);
+      foot.y -= h / rect.height;
+      const line = guideLeader.geometry.attributes.position;
+      line.setXYZ(0, ...foot.unproject(camera).toArray());
+      line.setXYZ(1, ...guidePoint.toArray());
+      line.needsUpdate = true;
+      guideLeader.geometry.computeBoundingSphere();
     } else shopLabel.visible = false;
+    guideLeader.visible = guideMarker.visible = shopLabel.visible;
   }
   const outputScale =
     renderer.getSize(new THREE.Vector2()).x / canvas.clientWidth;
@@ -247,6 +272,8 @@ function render() {
     floor: cameraFloor(camera.position.x, camera.position.z),
     label: shopLabel?.position.clone().project(camera).toArray(),
     labelVisible: shopLabel?.visible ?? false,
+    guideAnchor: guidePoint.toArray(),
+    guideScreen: guidePoint.clone().project(camera).toArray(),
   });
   if (mode === "tone" || mode === "line")
     mangaRenderer.render(scene, camera, mode, [comicContours]);
@@ -465,13 +492,27 @@ function view(name) {
         entryXZ[1] - (aspect < 1 ? 24 : 17.5),
       );
     } else {
-      controls.target.set(shopXZ[0], 16, shopXZ[1]);
-      camera.position.set(shopXZ[0] + 75, 100, shopXZ[1] + 100);
+      controls.target.set(entryXZ[0] + 3, 7, entryXZ[1]);
+      camera.position.set(
+        entryXZ[0] + 8,
+        9,
+        entryXZ[1] - (aspect < 1 ? 42 : 31),
+      );
     }
   }
   // A photographed street viewpoint must not start on an exported roof edge.
   // Find the nearest unobstructed ground point before the collision guard runs.
-  if (["crossing", "north", "signs", "route", "facade"].includes(name)) {
+  if (
+    [
+      "crossing",
+      "north",
+      "signs",
+      "route",
+      "facade",
+      "shop",
+      "entrance",
+    ].includes(name)
+  ) {
     const desired = camera.position.clone();
     let found = cameraFloor(desired.x, desired.z) <= 4.5;
     for (let radius = 0.5; radius <= 12 && !found; radius += 0.5) {
@@ -503,6 +544,7 @@ function view(name) {
     signs: ["看板と店先の細部", "写真の文字・窓割りを、そのまま街の面へ"],
     crossing: ["すすきの交差点", "ニッカの看板から、新ラーメン横丁へ"],
     street: ["すすきの・北側の街区", "PLATEAUの建物形状・外壁写真 / 2020年度"],
+    shop: ["つばさへの入口", "緑の看板から半地下へ。店は通路の一番奥 / B1F"],
     entrance: ["新ラーメン横丁 入口", "つばさは通路の一番奥 / B1F"],
   };
   const caption = captions[name] || [
@@ -831,21 +873,35 @@ async function start() {
     city.userData.artworkAttribution = artworkCredits;
     document.documentElement.dataset.artworkFacades =
       "yokocho,nikka,asahi,north-block,toyoko,no2-green,koban,no3-green";
-    const marker = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.65, 0.65, 80, 8),
+    guideMarker = new THREE.Mesh(
+      new THREE.ConeGeometry(0.22, 0.6, 12),
       new THREE.MeshBasicMaterial({ color: 0xce3035 }),
     );
-    marker.position.set(shopXZ[0], 22.5, shopXZ[1]);
-    marker.geometry.dispose();
-    marker.geometry = new THREE.CylinderGeometry(0.4, 0.4, 45, 8);
-    marker.name = "Tsubasa / Shin Ramen Yokocho vicinity (not entrance)";
-    marker.userData = {
-      coordinates: landmarks.shop.coordinates,
-      role: "Approximate place marker, not entrance",
+    guideMarker.rotation.z = Math.PI;
+    guideMarker.position.copy(guidePoint).add(new THREE.Vector3(0, 0.5, 0));
+    guideMarker.name = "Tsubasa wayfinding / Shin Ramen Yokocho entrance sign";
+    guideMarker.userData = {
+      coordinates: landmarks.entrance.coordinates,
+      signAnchor: guidePoint.toArray(),
+      role: "Entrance guide; restaurant is at the far end of the B1F corridor",
     };
-    city.add(marker);
-    shopLabel = makeLabel("味一番つばさ");
+    city.add(guideMarker);
+    shopLabel = makeLabel(
+      "つばさへの入口",
+      "緑の看板から、通路の一番奥へ · B1F",
+    );
     scene.add(shopLabel);
+    guideLeader = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([guidePoint, guidePoint]),
+      new THREE.LineBasicMaterial({
+        color: 0xce3035,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    guideLeader.renderOrder = 98;
+    scene.add(guideLeader);
     const resize = () => {
       if (exporting) return;
       const r = canvas.getBoundingClientRect();
