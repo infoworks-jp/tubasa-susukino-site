@@ -21,6 +21,12 @@ import {
   plateauCredit,
   plateauSource,
 } from "./plateau.mjs";
+import {
+  routePanels,
+  routeAtlases,
+  entranceAnchor,
+  entranceAngle,
+} from "./route-facades.mjs";
 import { addSurveyedFacades } from "./surveyed-facades.mjs";
 import { landmarks } from "./landmarks.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
@@ -397,6 +403,8 @@ function applyMode(next) {
 function view(name) {
   activeView = name;
   const aspect = canvas.clientWidth / canvas.clientHeight;
+  camera.fov = name === "route" ? (aspect >= 1 ? 56 : 48) : 42;
+  camera.updateProjectionMatrix();
   if (name === "overview") {
     controls.target.set(-15, 12, 10);
     const direction = new THREE.Vector3(1, 1.2, 1.15).normalize();
@@ -417,6 +425,9 @@ function view(name) {
       });
       if (fits) break;
     }
+  } else if (name === "route") {
+    controls.target.set(aspect < 1 ? -26 : -18, aspect < 1 ? 21 : 20, -14);
+    camera.position.set(aspect < 1 ? -120 : -75, aspect < 1 ? 26 : 16, -50);
   } else if (name === "north") {
     controls.target.set(-43, 19, -75);
     camera.position.set(aspect < 1 ? -92 : -109, 12, aspect < 1 ? 20 : -13);
@@ -452,7 +463,7 @@ function view(name) {
   }
   // A photographed street viewpoint must not start on an exported roof edge.
   // Find the nearest unobstructed ground point before the collision guard runs.
-  if (["crossing", "north", "signs"].includes(name)) {
+  if (["crossing", "north", "signs", "route"].includes(name)) {
     const desired = camera.position.clone();
     let found = cameraFloor(desired.x, desired.z) <= 4.5;
     for (let radius = 0.5; radius <= 12 && !found; radius += 0.5) {
@@ -469,13 +480,23 @@ function view(name) {
   }
   controls.update();
   const captions = {
-    north: ["すすきの交差点・北側", "看板・窓・外壁 / 2024年、一部2022年の写真"],
+    route: [
+      "交差点から、新ラーメン横丁へ",
+      "第2グリーンビル → 薄野交番 → 第3グリーンビル",
+    ],
+    north: [
+      "すすきの交差点・北側",
+      "看板・窓・外壁 / 2024年、一部2022年の写真",
+    ],
     signs: ["看板と店先の細部", "写真の文字・窓割りを、そのまま街の面へ"],
     crossing: ["すすきの交差点", "ニッカの看板から、新ラーメン横丁へ"],
     street: ["すすきの・北側の街区", "PLATEAUの建物形状・外壁写真 / 2020年度"],
     entrance: ["新ラーメン横丁 入口", "つばさは通路の一番奥 / B1F"],
   };
-  const caption = captions[name] || ["味一番つばさ", "新ラーメン横丁の一番奥 / B1F"];
+  const caption = captions[name] || [
+    "味一番つばさ",
+    "新ラーメン横丁の一番奥 / B1F",
+  ];
   document.querySelector(".scene-note b").textContent = caption[0];
   document.querySelector(".scene-note span").textContent = caption[1];
   document
@@ -491,8 +512,8 @@ function view(name) {
 function addFrontage() {
   frontage = new THREE.Group();
   frontage.name = "Shin Ramen Yokocho / photograph-based entrance";
-  frontage.position.set(entryXZ[0], 0, entryXZ[1]);
-  frontage.rotation.y = 0.173;
+  frontage.position.set(entranceAnchor[0], 0, entranceAnchor[1]);
+  frontage.rotation.y = entranceAngle;
   frontage.userData = {
     ...landmarks.entrance,
     source: "User photograph; permission confirmed 2026-10-14",
@@ -781,11 +802,17 @@ async function start() {
       ...(await addPhotoFacade(frontage)),
       ...(await addIllustratedStreet(city)),
       ...(await addSurveyedFacades(city)),
+      ...(await addSurveyedFacades(
+        city,
+        routePanels,
+        routeAtlases,
+        "Susukino / Route 36 to Yokocho",
+      )),
     ];
     city.userData.artworkSources = artworkSources;
     city.userData.artworkAttribution = artworkCredits;
     document.documentElement.dataset.artworkFacades =
-      "yokocho,nikka,asahi,north-block,toyoko";
+      "yokocho,nikka,asahi,north-block,toyoko,no2-green,koban,no3-green";
     const marker = new THREE.Mesh(
       new THREE.CylinderGeometry(0.65, 0.65, 80, 8),
       new THREE.MeshBasicMaterial({ color: 0xce3035 }),
@@ -810,7 +837,7 @@ async function start() {
       render();
     };
     new ResizeObserver(resize).observe(canvas);
-    view("north");
+    view("route");
     applyMode("tone");
     resize();
     buttons.forEach((b) => (b.disabled = false));

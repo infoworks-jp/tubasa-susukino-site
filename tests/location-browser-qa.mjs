@@ -168,15 +168,21 @@ for (const viewport of [
     "far high-detail instances are removed from GPU draws, not merely shrunk",
   );
   assert.equal(
-    await page.locator('[data-view="north"]').getAttribute("aria-pressed"),
+    await page.locator('[data-view="route"]').getAttribute("aria-pressed"),
     "true",
-    "detailed street is the initial view",
+    "continuous crossing-to-Yokocho street is the initial view",
   );
   assert.equal(
     await page.evaluate(() =>
       Number(document.documentElement.dataset.surveyedPanels),
     ),
     28,
+  );
+  assert.equal(
+    await page.evaluate(() =>
+      Number(document.documentElement.dataset.routePanels),
+    ),
+    30,
   );
   for (const mode of ["color", "line", "tone", "night"]) {
     await page.locator(`[data-mode="${mode}"]`).click();
@@ -207,20 +213,34 @@ for (const viewport of [
         "artwork mask must not bypass monochrome for ordinary geometry",
       );
       if (viewport.width === 1440) {
+        // Keep the sky regression on its original north camera, independently
+        // of changes to the initial street framing.
+        await page.locator('[data-view="north"]').click();
+        const sky = PNG.sync.read(await page.locator(".stage").screenshot());
         // A known unobstructed sky area in the north preset must remain paper
         // white. Zero-radius halftone AA previously left dots even at density 0.
-        let ink = 0, pixels = 0;
-        for (let y = Math.floor(png.height * .07); y < png.height * .2; y++)
-          for (let x = Math.floor(png.width * .75); x < png.width * .85; x++) {
+        let ink = 0,
+          pixels = 0;
+        for (let y = Math.floor(sky.height * 0.07); y < sky.height * 0.2; y++)
+          for (
+            let x = Math.floor(sky.width * 0.75);
+            x < sky.width * 0.85;
+            x++
+          ) {
             pixels++;
-            if (png.data[(y * png.width + x) * 4] < 250) ink++;
+            if (sky.data[(y * sky.width + x) * 4] < 250) ink++;
           }
-        assert.ok(ink / pixels < .005, "empty sky has no residual halftone dots");
+        assert.ok(
+          ink / pixels < 0.005,
+          "empty sky has no residual halftone dots",
+        );
+        await page.locator('[data-view="route"]').click();
       }
     }
   }
   for (const view of [
     "entrance",
+    "route",
     "crossing",
     "north",
     "signs",
@@ -372,8 +392,8 @@ for (const viewport of [
         "export contains the photograph-aligned entrance sign",
       );
       assert.ok(
-        json.images?.length >= 6,
-        "export preserves two manga textures, two street photo atlases and two PLATEAU photo atlases",
+        json.images?.length >= 8,
+        "export preserves one manga texture, five street photo atlases and two PLATEAU photo atlases",
       );
       for (const name of [
         "Nikka / corner facade",
@@ -390,7 +410,7 @@ for (const viewport of [
       const artwork = json.nodes.find((n) => n.extras?.artworkSources)?.extras;
       assert.equal(
         artwork?.artworkSources.length,
-        4,
+        7,
         "export retains all source photograph records",
       );
       assert.ok(artwork.artworkAttribution.includes("MIKI Yoshihito"));
@@ -402,8 +422,19 @@ for (const viewport of [
       assert.equal(photographed.extras.sources.length, 2);
       assert.equal(
         json.nodes.filter((n) => n.extras?.measuredPhotoCorners).length,
-        28,
+        58,
       );
+      const route = json.nodes.find(
+        (n) => n.name === "Susukino / Route 36 to Yokocho",
+      );
+      assert.equal(route.extras.panelCount, 30);
+      assert.equal(route.extras.sources.length, 3);
+      for (const name of [
+        "No.2 / Maruhan roof sign",
+        "Koban / POLICE and wall lettering",
+        "No.3 / Sapporo roof billboard",
+      ])
+        assert.ok(json.nodes.some((n) => n.name === name));
       const plateau = json.nodes.find(
         (n) => n.extras?.buildingCount === 85,
       )?.extras;

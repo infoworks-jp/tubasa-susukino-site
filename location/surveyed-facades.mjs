@@ -8,28 +8,30 @@ import {
   surveyedPanels,
 } from "./facade-projection.mjs";
 
-export async function addSurveyedFacades(city) {
+export async function addSurveyedFacades(
+  city,
+  panels = surveyedPanels,
+  atlases = [photoAtlas, baseAtlas],
+  groupName = "Susukino / photographed street detail",
+) {
   const textures = new Map(
       await Promise.all(
-        [photoAtlas, baseAtlas].map(async (a) => [
-          a.file,
-          await loadArtwork(a.file),
-        ]),
+        atlases.map(async (a) => [a.file, await loadArtwork(a.file)]),
       ),
     ),
     materials = [];
   const group = new THREE.Group();
-  group.name = "Susukino / photographed street detail";
+  group.name = groupName;
   group.userData = {
-    sources: [photoAtlas, baseAtlas],
-    panelCount: surveyedPanels.length,
+    sources: atlases,
+    panelCount: panels.length,
     technique:
       "Perspective-correct photographic facade UVs, measured footprint edges, shallow architectural relief. No generated lettering.",
     limitations:
-      "Photographed in March 2024. Heights and relief are approximate; hidden facade areas and interior shops are not reconstructed.",
+      "Dates are recorded per photo source. Heights and relief are approximate; hidden facade areas and interior shops are not reconstructed.",
   };
   city.add(group);
-  for (const panel of surveyedPanels) {
+  for (const panel of panels) {
     const { a, b, bottom, height, q, name } = panel;
     const atlas = panel.atlas || photoAtlas,
       texture = textures.get(atlas.file);
@@ -105,8 +107,8 @@ export async function addSurveyedFacades(city) {
         0xbdbcb7,
       );
   }
-  document.documentElement.dataset.surveyedPanels = String(
-    surveyedPanels.length,
-  );
+  document.documentElement.dataset[
+    groupName.includes("Route 36") ? "routePanels" : "surveyedPanels"
+  ] = String(panels.length);
   return materials;
 }

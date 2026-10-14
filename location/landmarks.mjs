@@ -1,3 +1,4 @@
+import { entranceAnchor } from "./route-facades.mjs";
 // Static facts: no map/API request is made by visitors.
 export const landmarks = {
   shop: {
@@ -14,7 +15,12 @@ export const landmarks = {
   // of the north frontage. Project onto that OSM facade; this is a facade
   // placement, not a surveyed doorway coordinate or an indoor floor plan.
   entrance: {
-    coordinates: [141.3542, 43.05553027],
+    coordinates: [
+      141.354277879 +
+        entranceAnchor[0] /
+          (111320 * Math.cos((43.055365148368 * Math.PI) / 180)),
+      43.055365148368 - entranceAnchor[1] / 111320,
+    ],
     placement: "Photo + mapped north frontage; approximate facade placement",
     width: 3.2,
     signHeight: 2.4,

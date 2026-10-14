@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { loadArtwork, artworkPlane, outlinedBox } from "./artwork.mjs";
+import { routeBuildings, routeAtlases } from "./route-facades.mjs";
 export const artworkCredits =
-  "写真: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0), jegal gihwan (Unsplash)";
+  "写真: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0), jegal gihwan (Unsplash), Choi2451 / 禁樹なずな (CC BY-SA 4.0), 提供写真";
 export const artworkSources = [
   {
     author: "x768",
@@ -29,6 +30,14 @@ export const artworkSources = [
     license: "https://unsplash.com/license",
   },
 ];
+artworkSources.push(
+  ...routeAtlases.map((a) => ({
+    author: a.author,
+    date: a.date,
+    url: a.source,
+    license: a.license,
+  })),
+);
 // Map footprints; facade heights are documented approximations where no
 // survey is available. The Asahi chamfer is at the actual western corner.
 const northBuildings = [
@@ -93,6 +102,29 @@ const northBuildings = [
 // Replace the procedural north-side masses as well as their windows. Otherwise
 // random tall walls protrude through the photo-derived facades. The resulting
 // geometry stays in the original collision mesh and its BVH is rebuilt by caller.
+function withinRoute(x, z) {
+  // Expanded only 0.32m to include the original decorative window relief.
+  return routeBuildings.some(({ ring }) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[j],
+        b = ring[i],
+        dx = b[0] - a[0],
+        dz = b[1] - a[1];
+      const t = Math.max(
+        0,
+        Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)),
+      );
+      if (Math.hypot(x - a[0] - t * dx, z - a[1] - t * dz) < 0.32) return true;
+      if (
+        a[1] > z !== b[1] > z &&
+        x < ((b[0] - a[0]) * (z - a[1])) / (b[1] - a[1]) + a[0]
+      )
+        inside = !inside;
+    }
+    return inside;
+  });
+}
 export function refineLandmarkMasses(mesh) {
   if (!["buildings", "buildingsDetail"].includes(mesh.name)) return;
   mesh.updateWorldMatrix(true, false);
@@ -101,15 +133,20 @@ export function refineLandmarkMasses(mesh) {
     : mesh.geometry.clone();
   const pos = source.attributes.position,
     keep = [],
-    p = new THREE.Vector3();
+    p = new THREE.Vector3(),
+    centroid = new THREE.Vector3();
   for (let i = 0; i < pos.count; i += 3) {
     let replaced = false;
+    centroid.set(0, 0, 0);
     for (let j = 0; j < 3; j++) {
       p.fromBufferAttribute(pos, i + j).applyMatrix4(mesh.matrixWorld);
+      centroid.add(p);
       replaced ||=
         (p.x > -73 && p.x < 43 && p.z > -108 && p.z < -57) ||
         (p.x > -76 && p.x < -57 && p.z > -121 && p.z < -92);
     }
+    // A shared boundary vertex must not delete the neighbouring building.
+    replaced ||= withinRoute(centroid.x / 3, centroid.z / 3);
     if (!replaced) keep.push(i, i + 1, i + 2);
   }
   const geometry = new THREE.BufferGeometry();
@@ -133,7 +170,7 @@ export function refineLandmarkMasses(mesh) {
   }
   const parts = [geometry];
   if (mesh.name === "buildings")
-    for (const { ring, height } of northBuildings) {
+    for (const { ring, height } of [...northBuildings, ...routeBuildings]) {
       const shape = new THREE.Shape(
         ring.map(([x, z]) => new THREE.Vector2(x, -z)),
       );
