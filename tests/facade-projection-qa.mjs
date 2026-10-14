@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
 import fs from "node:fs/promises";
 import {
   projectQuad,
@@ -15,6 +16,9 @@ import {
   entrancePoint,
 } from "../location/route-facades.mjs";
 const allPanels = [...surveyedPanels, ...routePanels];
+execFileSync(process.execPath, ['scripts/build-arrival-model.mjs', '--check'], {stdio: 'pipe'});
+execFileSync(process.execPath, ['scripts/build-arrival-model.mjs', '--portrait', '--check'], {stdio: 'pipe'});
+console.log('PASS: exact arrival model is reproducible and below its initial transfer budget');
 const corners = [
   [0, 0],
   [1, 0],

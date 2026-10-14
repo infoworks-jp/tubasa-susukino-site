@@ -349,7 +349,7 @@ function describeMode() {
     (activeView === "entrance"
       ? " · 横丁入口（つばさは通路の奥）"
       : " · すすきの / つばさ周辺") +
-    (detailState === "loading" ? " · 周辺の外壁を読み込み中（操作できます）"
+    (detailState === "loading" ? " · 周辺の街並みを読み込み中（操作できます）"
       : detailState === "error" ? " · 周辺の読み込みに失敗しました" : "");
 }
 function applyMode(next) {
@@ -753,8 +753,9 @@ async function start() {
     addFrontage();
     // Only the arrival route competes for initial bandwidth. Independent core
     // resources start together; photographic surroundings are a second stage.
-    const [imported, lowTrees, plateau, ...coreArtwork] = await Promise.all([
-      loader.loadAsync("./susukino-detail.glb"),
+    const [arrival, lowTrees, plateau, ...coreArtwork] = await Promise.all([
+      loader.loadAsync(canvas.clientWidth / canvas.clientHeight < 1
+        ? "./susukino-arrival-portrait.glb" : "./susukino-arrival.glb"),
       loader.loadAsync("./susukino-trees-low.glb"),
       loadPlateau(loader, streetClipPlanes.map((p) => new THREE.Plane(p.normal, 235))),
       addPhotoFacade(frontage),
@@ -764,67 +765,74 @@ async function start() {
     ]);
     photoMaterials = coreArtwork.flat();
     performance.mark("city-core-downloaded");
-    imported.scene.name = "Susukino / permitted Rokehan GLB output";
-    imported.scene.userData = {
-      source: "https://oyasumi-gamedev.com/tools/rokehan/",
-      attribution: credits,
-      license: "Exported model commercial reuse permitted; map data ODbL",
-      limitations:
-        "Procedural facades, signs and roof equipment are not surveyed real architecture",
-    };
-    let replacedTriangles = 0;
-    imported.scene.traverse((o) => {
-      if (!o.isMesh) return;
-      o.castShadow = true;
-      o.receiveShadow = true;
-      if (o.name === "buildings" || o.name === "buildingsDetail") {
-        refineLandmarkMasses(o);
-        replacedTriangles += replaceProceduralMasses(o, plateau.features);
-        computeBoundsTree.call(o.geometry);
-        o.raycast = acceleratedRaycast;
-        collisionMeshes.push(o);
-      }
-      const list = Array.isArray(o.material) ? o.material : [o.material];
-      for (const material of list) {
-        material.clippingPlanes = streetClipPlanes;
-        material.clipShadows = true;
-        material.userData.dayColor = material.color.getHex();
-        material.userData.originalVertexColors = material.vertexColors;
-        referenceMaterials.push(material);
-      }
-    });
-    imported.scene.updateMatrixWorld(true);
-    const obstructingTrees = [];
-    imported.scene.traverse((o) => {
-      if (!o.isMesh || !o.name.startsWith("tree_")) return;
-      const blocks = (point) =>
-        point.x > -130 && point.x < 60 && point.z > -125 && point.z < 65;
-      if (o.isInstancedMesh) {
-        o.geometry.computeBoundingBox();
-        const center = o.geometry.boundingBox.getCenter(new THREE.Vector3());
-        for (let i = 0; i < o.count; i++) {
-          const matrix = new THREE.Matrix4();
-          o.getMatrixAt(i, matrix);
-          const point = center
-            .clone()
-            .applyMatrix4(matrix)
-            .applyMatrix4(o.matrixWorld);
-          if (blocks(point)) {
-            matrix.scale(new THREE.Vector3(1e-8, 1e-8, 1e-8));
-            o.setMatrixAt(i, matrix);
-          }
+    let imported = arrival;
+    function prepareImported(imported) {
+      imported.scene.name = "Susukino / permitted Rokehan GLB output";
+      imported.scene.userData = {
+        source: "https://oyasumi-gamedev.com/tools/rokehan/",
+        attribution: credits,
+        license: "Exported model commercial reuse permitted; map data ODbL",
+        limitations:
+          "Procedural facades, signs and roof equipment are not surveyed real architecture",
+      };
+      let replacedTriangles = 0;
+      imported.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = true;
+        o.receiveShadow = true;
+        if (o.name === "buildings" || o.name === "buildingsDetail") {
+          if (!o.userData.arrivalPrepared) {
+            refineLandmarkMasses(o);
+            replacedTriangles += replaceProceduralMasses(o, plateau.features);
+          } else replacedTriangles += o.userData.arrivalReplacedTriangles;
+          computeBoundsTree.call(o.geometry);
+          o.raycast = acceleratedRaycast;
+          collisionMeshes.push(o);
         }
-        o.instanceMatrix.needsUpdate = true;
-      } else {
-        const point = new THREE.Box3()
-          .setFromObject(o)
-          .getCenter(new THREE.Vector3());
-        if (blocks(point)) obstructingTrees.push(o);
-      }
-    });
-    // The exported tool distributes decorative trees, not surveyed trees. Omit
-    // these throughout the illustrated intersection so they cannot conceal signs.
-    obstructingTrees.forEach((o) => o.removeFromParent());
+        const list = Array.isArray(o.material) ? o.material : [o.material];
+        for (const material of list) {
+          material.clippingPlanes = streetClipPlanes;
+          material.clipShadows = true;
+          material.userData.dayColor = material.color.getHex();
+          material.userData.originalVertexColors = material.vertexColors;
+          referenceMaterials.push(material);
+        }
+      });
+      imported.scene.updateMatrixWorld(true);
+      const obstructingTrees = [];
+      imported.scene.traverse((o) => {
+        if (!o.isMesh || !o.name.startsWith("tree_")) return;
+        const blocks = (point) =>
+          point.x > -130 && point.x < 60 && point.z > -125 && point.z < 65;
+        if (o.isInstancedMesh) {
+          o.geometry.computeBoundingBox();
+          const center = o.geometry.boundingBox.getCenter(new THREE.Vector3());
+          for (let i = 0; i < o.count; i++) {
+            const matrix = new THREE.Matrix4();
+            o.getMatrixAt(i, matrix);
+            const point = center
+              .clone()
+              .applyMatrix4(matrix)
+              .applyMatrix4(o.matrixWorld);
+            if (blocks(point)) {
+              matrix.scale(new THREE.Vector3(1e-8, 1e-8, 1e-8));
+              o.setMatrixAt(i, matrix);
+            }
+          }
+          o.instanceMatrix.needsUpdate = true;
+        } else {
+          const point = new THREE.Box3()
+            .setFromObject(o)
+            .getCenter(new THREE.Vector3());
+          if (blocks(point)) obstructingTrees.push(o);
+        }
+      });
+      // The exported tool distributes decorative trees, not surveyed trees. Omit
+      // these throughout the illustrated intersection so they cannot conceal signs.
+      obstructingTrees.forEach((o) => o.removeFromParent());
+      return replacedTriangles;
+    }
+    let replacedTriangles = prepareImported(imported);
     lowTrees.scene.traverse((o) => {
       if (!o.isMesh) return;
       // Singleton trees already exist in the detailed model; do not overlay a second copy.
@@ -843,6 +851,23 @@ async function start() {
       }
     });
     city.add(lowTrees.scene);
+    const completeLowTrees = lowTrees.scene.clone(true);
+    lowTrees.scene.updateMatrixWorld(true);
+    // Unpaired distant species still use the existing low tree model. Mask
+    // the same sign-obstructing instances before the arrival model is drawn.
+    lowTrees.scene.traverse(o => {
+      if (!o.isInstancedMesh) return;
+      o.geometry.computeBoundingBox();
+      const center = o.geometry.boundingBox.getCenter(new THREE.Vector3());
+      for (let i = 0; i < o.count; i++) {
+        const m = new THREE.Matrix4(); o.getMatrixAt(i, m);
+        const p = center.clone().applyMatrix4(m).applyMatrix4(o.matrixWorld);
+        if (p.x > -130 && p.x < 60 && p.z > -125 && p.z < 65) {
+          m.scale(new THREE.Vector3(1e-8, 1e-8, 1e-8)); o.setMatrixAt(i, m);
+        }
+      }
+      o.instanceMatrix.needsUpdate = true;
+    });
     updateTreeLOD = makeTreeLOD(imported.scene, lowTrees.scene);
     city.add(imported.scene);
     city.add(plateau.group);
@@ -1069,12 +1094,29 @@ async function start() {
     performance.mark("city-interactive");
     try {
       const north = new THREE.Group();
-      const [, northMaterials] = await Promise.all([
+      const [completeImport, , northMaterials] = await Promise.all([
+        loader.loadAsync("./susukino-detail.glb"),
         loadPlateauTextures(plateau),
         addSurveyedFacades(north),
       ]);
       performance.mark("city-surroundings-downloaded");
       if (renderer.getContext().isContextLost()) return;
+      // Replace only the arrival subset, retaining exact original full-detail
+      // geometry, tree LOD, collision surfaces, and the visitor's current view.
+      const arrivalMeshes = new Set();
+      imported.scene.traverse(o => { if (o.isMesh) arrivalMeshes.add(o); });
+      for (let i = collisionMeshes.length - 1; i >= 0; i--)
+        if (arrivalMeshes.has(collisionMeshes[i])) collisionMeshes.splice(i, 1);
+      imported.scene.removeFromParent();
+      lowTrees.scene.removeFromParent();
+      arrivalMeshes.forEach(o => o.geometry.dispose());
+      imported = completeImport;
+      replacedTriangles = prepareImported(imported);
+      city.add(imported.scene, completeLowTrees);
+      updateTreeLOD = makeTreeLOD(imported.scene, completeLowTrees);
+      floorCache.x = NaN;
+      document.documentElement.dataset.plateauReplacedTriangles = String(replacedTriangles);
+      document.documentElement.dataset.collisionMeshes = String(collisionMeshes.length);
       for (const group of [...north.children]) city.add(group);
       photoMaterials.push(...northMaterials);
       let totalVertices = 0;

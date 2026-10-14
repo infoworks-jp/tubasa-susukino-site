@@ -14,9 +14,16 @@ export async function verifyProgressiveLoading(browser, base, directory) {
       await barrier;
       await route.continue();
     });
+    await page.route("**/susukino-detail.glb", async (route) => {
+      await barrier;
+      await route.continue();
+    });
     try {
       await page.goto(base + "/location/", { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => document.documentElement.dataset.cityInteractive === "true", {}, { timeout: 90000 });
+      const arrived = await page.evaluate(() => performance.getEntriesByType('resource').map(r => new URL(r.name).pathname));
+      assert.ok(arrived.some(p => p.endsWith(width === 390 ? '/susukino-arrival-portrait.glb' : '/susukino-arrival.glb')));
+      assert.ok(!arrived.some(p => p.endsWith('/susukino-detail.glb')), 'whole-city model must not block first interaction');
       assert.equal(await page.locator("#png").isDisabled(), true);
       assert.equal(await page.locator("#glb").isDisabled(), true);
       assert.equal(await page.locator('[data-view="entrance"]').isEnabled(), true);
