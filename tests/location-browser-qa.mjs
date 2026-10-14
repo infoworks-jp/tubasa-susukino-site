@@ -184,6 +184,22 @@ for (const viewport of [
     ),
     30,
   );
+  assert.ok(
+    Number(
+      await page.evaluate(() => document.documentElement.dataset.routeRelief),
+    ) === 11,
+    "route has real window/reveal geometry, not only flat photo panels",
+  );
+  const pavement = await page.evaluate(() =>
+    JSON.parse(document.documentElement.dataset.routePavement),
+  );
+  assert.ok(
+    pavement.mappedOuterEdge &&
+      pavement.stations > 80 &&
+      pavement.minWidth > 1 &&
+      pavement.maxWidth < 18,
+    "continuous route pavement follows the existing map mesh",
+  );
   for (const mode of ["color", "line", "tone", "night"]) {
     await page.locator(`[data-mode="${mode}"]`).click();
     await page.waitForTimeout(250);
@@ -240,6 +256,7 @@ for (const viewport of [
   }
   for (const view of [
     "entrance",
+    "facade",
     "route",
     "crossing",
     "north",
@@ -334,6 +351,53 @@ for (const viewport of [
       path: `location-qa/${viewport.width}-entrance-${mode}.png`,
     });
   }
+  await page.locator('[data-view="entrance"]').click();
+  for (const m of ["line", "tone"]) {
+    await page.locator('[data-mode="' + m + '"]').click();
+    // Element screenshots include overlapping DOM controls (the existing red
+    // caption stripe). Read the rendered canvas pixels to test the 3D mask only.
+    const rawCanvas = Buffer.from(
+      (
+        await page
+          .locator("#city")
+          .evaluate((canvas) => canvas.toDataURL("image/png"))
+      ).split(",")[1],
+      "base64",
+    );
+    await fs.writeFile(
+      `location-qa/${viewport.width}-${m}-spot-colour.png`,
+      rawCanvas,
+    );
+    const accent = PNG.sync.read(rawCanvas);
+    let green = 0,
+      red = 0;
+    const bounds = [accent.width, accent.height, 0, 0];
+    for (let y = 0; y < accent.height; y++)
+      for (let x = 0; x < accent.width; x++) {
+        const i = (y * accent.width + x) * 4,
+          [r, g, b] = accent.data.subarray(i, i + 3);
+        const isGreen = g - r > 25 && g - b > 20,
+          isRed = r - g > 35 && r - b > 30;
+        green += isGreen ? 1 : 0;
+        red += isRed ? 1 : 0;
+        if (isGreen || isRed) {
+          bounds[0] = Math.min(bounds[0], x);
+          bounds[1] = Math.min(bounds[1], y);
+          bounds[2] = Math.max(bounds[2], x);
+          bounds[3] = Math.max(bounds[3], y);
+        }
+      }
+    assert.ok(
+      green > 40 && red > 30,
+      "alley sign retains both green frame and red letters",
+    );
+    assert.ok(
+      bounds[2] - bounds[0] < accent.width * 0.3 &&
+        bounds[3] - bounds[1] < accent.height * 0.35,
+      "spot colour is confined to the entrance sign; surrounding architecture stays manga",
+    );
+  }
+  await page.locator('[data-mode="night"]').click();
   await page.locator('[data-view="overview"]').click();
   await page.locator("#city").focus();
   await page.keyboard.press("ArrowRight");
@@ -435,6 +499,16 @@ for (const viewport of [
         "No.3 / Sapporo roof billboard",
       ])
         assert.ok(json.nodes.some((n) => n.name === name));
+      assert.ok(
+        json.nodes.some((n) =>
+          n.name?.includes("window reveals and stepped returns"),
+        ),
+        "GLB retains window depth",
+      );
+      assert.ok(
+        json.nodes.some((n) => n.name === "continuous mapped sidewalk"),
+        "GLB retains connected pavement",
+      );
       const plateau = json.nodes.find(
         (n) => n.extras?.buildingCount === 85,
       )?.extras;

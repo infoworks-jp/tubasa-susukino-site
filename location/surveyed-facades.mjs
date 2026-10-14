@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { makeReliefGeometry } from "./facade-relief.mjs";
 import { loadArtwork, outlinedBox } from "./artwork.mjs";
 import {
   projectQuad,
@@ -48,24 +49,26 @@ export async function addSurveyedFacades(
       .set((a[0] + b[0]) / 2, bottom + height / 2, (a[1] + b[1]) / 2)
       .addScaledVector(normal, (panel.offset ?? 0.18) + (panel.depth || 0));
     group.add(root);
-    const g = new THREE.PlaneGeometry(w, height, 32, 32),
-      pos = g.attributes.position,
-      uv = g.attributes.uv;
-    for (let i = 0; i < pos.count; i++) {
-      const pixel = projectQuad(
-        q,
-        pos.getX(i) / w + 0.5,
-        0.5 - pos.getY(i) / height,
+    const { geometry: g, reveals } = makeReliefGeometry(panel, atlas);
+    if (reveals.attributes.position.count) {
+      const reveal = new THREE.Mesh(
+        reveals,
+        new THREE.MeshStandardMaterial({
+          color: 0xaaa9a4,
+          roughness: 1,
+          side: THREE.DoubleSide,
+        }),
       );
-      uv.setXY(i, ...atlasUV(pixel, atlas));
-    }
-    g.setAttribute(
-      "inkArtwork",
-      new THREE.Float32BufferAttribute(
-        new Float32Array(pos.count).fill(panel.inkMask ?? 0.6),
-        1,
-      ),
-    );
+      reveal.name = name + " / window reveals and stepped returns";
+      reveal.castShadow = true;
+      reveal.receiveShadow = true;
+      reveal.userData = {
+        architecturalRelief: true,
+        depths: panel.relief,
+        source: atlas.source,
+      };
+      root.add(reveal);
+    } else reveals.dispose();
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       side: THREE.DoubleSide,
@@ -74,11 +77,13 @@ export async function addSurveyedFacades(
     material.userData.photographicFacade = true;
     materials.push(material);
     const mesh = new THREE.Mesh(g, material);
+    mesh.castShadow = true;
     mesh.userData = {
       source: atlas.source,
       photoDate: atlas.date,
       license: atlas.license,
       measuredPhotoCorners: q,
+      architecturalRelief: panel.relief || [],
     };
     root.add(mesh);
     // Thin cornices and continuous window frames follow rows visible in this
@@ -103,7 +108,16 @@ export async function addSurveyedFacades(
       outlinedBox(
         root,
         [w, height, panel.depth],
-        [0, 0, -panel.depth / 2 - 0.015],
+        [
+          0,
+          0,
+          -Math.max(
+            panel.depth / 2 + 0.015,
+            ...(panel.relief || []).map(
+              (r) => -r.depth + panel.depth / 2 + 0.015,
+            ),
+          ),
+        ],
         0xbdbcb7,
       );
   }

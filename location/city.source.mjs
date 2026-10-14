@@ -28,6 +28,7 @@ import {
   entranceAngle,
 } from "./route-facades.mjs";
 import { addSurveyedFacades } from "./surveyed-facades.mjs";
+import { addRouteArchitecture } from "./route-architecture.mjs";
 import { landmarks } from "./landmarks.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 const canvas = document.querySelector("#city"),
@@ -428,6 +429,13 @@ function view(name) {
   } else if (name === "route") {
     controls.target.set(aspect < 1 ? -26 : -18, aspect < 1 ? 21 : 20, -14);
     camera.position.set(aspect < 1 ? -120 : -75, aspect < 1 ? 26 : 16, -50);
+  } else if (name === "facade") {
+    controls.target.set(-17, aspect < 1 ? 7.5 : 6.2, -14);
+    camera.position.set(
+      aspect < 1 ? -1 : -2,
+      aspect < 1 ? 10 : 7.5,
+      aspect < 1 ? -55 : -39,
+    );
   } else if (name === "north") {
     controls.target.set(-43, 19, -75);
     camera.position.set(aspect < 1 ? -92 : -109, 12, aspect < 1 ? 20 : -13);
@@ -463,7 +471,7 @@ function view(name) {
   }
   // A photographed street viewpoint must not start on an exported roof edge.
   // Find the nearest unobstructed ground point before the collision guard runs.
-  if (["crossing", "north", "signs", "route"].includes(name)) {
+  if (["crossing", "north", "signs", "route", "facade"].includes(name)) {
     const desired = camera.position.clone();
     let found = cameraFloor(desired.x, desired.z) <= 4.5;
     for (let radius = 0.5; radius <= 12 && !found; radius += 0.5) {
@@ -483,6 +491,10 @@ function view(name) {
     route: [
       "交差点から、新ラーメン横丁へ",
       "第2グリーンビル → 薄野交番 → 第3グリーンビル",
+    ],
+    facade: [
+      "交番の窓と、横丁へ続く歩道",
+      "緑と赤の看板が、新ラーメン横丁の入口",
     ],
     north: [
       "すすきの交差点・北側",
@@ -809,6 +821,12 @@ async function start() {
         "Susukino / Route 36 to Yokocho",
       )),
     ];
+    const routeArchitecture = addRouteArchitecture(city, imported.scene);
+    routeArchitecture.materials.forEach((m) => {
+      m.userData.dayColor = m.color.getHex();
+      m.userData.originalVertexColors = m.vertexColors;
+      referenceMaterials.push(m);
+    });
     city.userData.artworkSources = artworkSources;
     city.userData.artworkAttribution = artworkCredits;
     document.documentElement.dataset.artworkFacades =

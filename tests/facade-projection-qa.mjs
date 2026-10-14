@@ -154,3 +154,109 @@ for (const building of routeBuildings) {
 console.log(
   "PASS: real exported building meshes have aligned fronts without old window protrusions",
 );
+
+// Inspect the exported-style mesh, not just a relief configuration flag. A ray
+// at the centre of each photographed glazing opening must hit behind its frame.
+const { makeReliefGeometry } = await import("../location/facade-relief.mjs");
+let recessedOpenings = 0;
+for (const panel of routePanels.filter((p) => p.relief?.length)) {
+  const { geometry, reveals } = makeReliefGeometry(panel, panel.atlas);
+  const w = Math.hypot(panel.b[0] - panel.a[0], panel.b[1] - panel.a[1]);
+  const mesh = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+  );
+  const position = geometry.attributes.position;
+  for (let i = 0; i < position.count; i++)
+    assert.ok(
+      position.getZ(i) + (panel.offset ?? 0.12) + (panel.depth || 0) > 0.015,
+      panel.name + ": recess stays outside mapped solid",
+    );
+  for (const attr of [
+    geometry.attributes.position,
+    geometry.attributes.normal,
+    reveals.attributes.position,
+    reveals.attributes.normal,
+  ])
+    assert.ok(
+      [...attr.array].every(Number.isFinite),
+      panel.name + ": finite surface/reveal geometry",
+    );
+  assert.ok(
+    reveals.attributes.position.count > 0,
+    panel.name + ": perpendicular returns exist",
+  );
+  for (const opening of panel.relief.filter((r) => r.depth < -0.15)) {
+    const [l, t, r, b] = opening.rect;
+    assert.ok(
+      l < r && t < b && l >= 0 && t >= 0 && r <= 1 && b <= 1,
+      panel.name + ": measured opening inside photo",
+    );
+    ray.set(
+      new THREE.Vector3(
+        ((l + r) / 2 - 0.5) * w,
+        (0.5 - (t + b) / 2) * panel.height,
+        2,
+      ),
+      new THREE.Vector3(0, 0, -1),
+    );
+    const hit = ray.intersectObject(mesh)[0];
+    assert.ok(
+      hit && Math.abs(hit.distance - (2 - opening.depth)) < 1e-5,
+      panel.name + ": glass/door behind surrounding frame",
+    );
+    recessedOpenings++;
+  }
+  geometry.dispose();
+  reveals.dispose();
+  mesh.material.dispose();
+}
+assert.ok(
+  recessedOpenings >= 40,
+  "photographed window/door openings really recessed",
+);
+const { pavementProfile } = await import("../location/route-architecture.mjs");
+const pavement = pavementProfile(gltf.scene);
+for (let i = 1; i < pavement.samples.length; i++) {
+  const a = pavement.samples[i - 1],
+    b = pavement.samples[i];
+  assert.ok(
+    Math.hypot(b.x - a.x, b.z - a.z) < 1.5,
+    "continuous sidewalk without missing station",
+  );
+  assert.ok(b.width > 1 && b.width < 18, "mapped sidewalk width");
+  const walk = gltf.scene.getObjectByName("walk");
+  ray.set(
+    new THREE.Vector3(
+      b.x + pavement.n[0] * b.width,
+      1,
+      b.z + pavement.n[1] * b.width,
+    ),
+    new THREE.Vector3(0, -1, 0),
+  );
+  assert.ok(
+    ray.intersectObject(walk).length > 0,
+    "pavement ends on mapped walk surface",
+  );
+  ray.set(
+    new THREE.Vector3(
+      b.x + pavement.n[0] * (b.width + 0.125),
+      1,
+      b.z + pavement.n[1] * (b.width + 0.125),
+    ),
+    new THREE.Vector3(0, -1, 0),
+  );
+  assert.equal(
+    ray.intersectObject(walk).length,
+    0,
+    "curb really ends at map boundary, not at a sampling limit",
+  );
+}
+assert.equal(
+  routePanels.filter((p) => p.inkMask === 0.72).length,
+  1,
+  "only the authentic alley sign gets spot colour",
+);
+console.log(
+  `PASS: ${recessedOpenings} real recessed openings, perpendicular returns, ${pavement.samples.length} mapped pavement stations and single sign colour mask`,
+);

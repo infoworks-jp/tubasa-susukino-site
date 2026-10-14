@@ -1,3 +1,4 @@
+import { configureRouteRelief } from "./route-relief.mjs";
 // Photo corners measured in the listed preview dimensions. Every street-facing
 // panel is attached to the same OSM edge as its parent building, in local metres.
 export const routeBuildings = [
@@ -476,7 +477,7 @@ routePanels.push(
       [987, 461],
       [790, 464],
     ],
-    { depth: 0.4, inkMask: 0.66 },
+    { depth: 0.4, inkMask: 0.72 },
   ),
   entrance("Yokocho / pudding shop glass", [
     [621, 465],
@@ -491,3 +492,5 @@ routePanels.push(
     [989, 567],
   ]),
 );
+
+configureRouteRelief(routePanels);

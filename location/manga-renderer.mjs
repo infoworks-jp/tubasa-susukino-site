@@ -8,6 +8,10 @@ export class MangaRenderer {
     this.normal = new THREE.WebGLRenderTarget(1, 1, {
       depthTexture: new THREE.DepthTexture(1, 1),
     });
+    // Categorical artwork masks must not interpolate between neighbouring
+    // faces: linear filtering can mistake an ink/photo edge for the spot colour ID.
+    this.normal.texture.minFilter = THREE.NearestFilter;
+    this.normal.texture.magFilter = THREE.NearestFilter;
     this.normalMaterial = new THREE.MeshNormalMaterial();
     // Alpha is a material mask, not transparency. Authored ink must survive
     // the post-process without being thresholded or halftoned a second time.
@@ -81,7 +85,7 @@ export class MangaRenderer {
         // 0 = procedural surfaces, 0.4 = surveyed photographic facade, 1 = authored ink.
         // Trace the actual texture contrast (window frames, lettering, masonry).
         // No repeated/random windows or invented signs are added to these walls.
-        if(artwork>.2 && artwork<.7){
+        if(artwork>.2 && artwork<.74){
           float light=pow(max(l,0.),1./2.2);
           float left=luminanceAt(uv0-vec2(pixel.x,0.)),right=luminanceAt(uv0+vec2(pixel.x,0.));
           float top=luminanceAt(uv0+vec2(0.,pixel.y)),bottom=luminanceAt(uv0-vec2(0.,pixel.y));
@@ -114,7 +118,23 @@ export class MangaRenderer {
           }
           paper=mix(paper,vec3(.003),max(solid,textureInk*(detailed?.72:.9)));
         }
-        if(d<far*.99) paper=mix(paper,base,step(.75,artwork));
+        // Only the measured Yokocho sign receives spot colour. Posterised
+        // source hues keep its green frame/red lettering without turning the
+        // surrounding photographed buildings back into colour.
+        if(abs(artwork-.7215686)<.002){
+          vec3 srgb=pow(max(base,vec3(0.)),vec3(1./2.2));
+          float green=smoothstep(.02,.08,min(srgb.g-srgb.r,srgb.g-srgb.b));
+          float red=smoothstep(.02,.10,min(srgb.r-srgb.g,srgb.r-srgb.b));
+          float dark=1.-smoothstep(.20,.40,dot(srgb,vec3(.299,.587,.114)));
+          vec3 paint=mix(vec3(.96,.94,.83),vec3(.12,.16,.13),dark);
+          paint=mix(paint,vec3(.22,.48,.32),green);
+          paint=mix(paint,vec3(.70,.22,.18),red);
+          paint=mix(srgb,paint,.35);
+          paper=pow(paint,vec3(2.2));
+        }
+        // Preserve authored ink luminance. The multisampled colour pass can
+        // contain a sliver of a neighbouring photo even under its ink mask.
+        if(d<far*.99) paper=mix(paper,vec3(l),step(.75,artwork));
         gl_FragColor=vec4(mix(paper,vec3(.004),edge*(1.-artwork*.8)),1.);
         #include <colorspace_fragment>
       }`,
