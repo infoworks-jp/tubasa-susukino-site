@@ -5,6 +5,12 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { makeTreeLOD } from "./tree-lod.mjs";
 import { addPhotoFacade, setPhotoMode } from "./photo-facade.mjs";
+import {
+  addIllustratedStreet,
+  refineLandmarkMasses,
+  artworkCredits,
+  artworkSources,
+} from "./illustrated-street.mjs";
 import { computeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
@@ -195,7 +201,7 @@ function render() {
       screen.x = THREE.MathUtils.clamp(
         screen.x,
         -1 + (w + 20) / rect.width,
-        1 - (w + 20) / rect.width,
+        1 - (w + 160) / rect.width,
       );
       screen.y = THREE.MathUtils.clamp(
         screen.y,
@@ -399,36 +405,27 @@ function view(name) {
       });
       if (fits) break;
     }
+  } else if (name === "north") {
+    controls.target.set(-23, 18, -75);
+    camera.position.set(aspect < 1 ? -92 : -85, 12, aspect < 1 ? 20 : -22);
   } else if (name === "crossing") {
-    const p = xy([141.35336, 43.05563]);
-    controls.target.set(entryXZ[0], 8, entryXZ[1]);
-    let point = [p[0], -p[1]];
-    let found = false;
-    for (let radius = 0; radius <= 30 && !found; radius += 2) {
-      for (let i = 0; i < 16; i++) {
-        const candidate = [
-          p[0] + Math.cos((i * Math.PI) / 8) * radius,
-          -p[1] + Math.sin((i * Math.PI) / 8) * radius,
-        ];
-        if (cameraFloor(...candidate) <= 6.5) {
-          point = candidate;
-          found = true;
-          break;
-        }
-      }
-    }
-    camera.position.set(point[0], 6.5, point[1]);
+    controls.target.set(-36, 13, -8);
+    camera.position.set(
+      aspect < 1 ? -100 : -102,
+      aspect < 1 ? 10 : 8,
+      aspect < 1 ? -108 : -65,
+    );
   } else {
     if (name === "entrance") {
       controls.target.set(
         entryXZ[0] + (aspect < 1 ? 0 : 4),
-        aspect < 1 ? 2.7 : 4,
+        aspect < 1 ? 3.3 : 4.5,
         entryXZ[1],
       );
       camera.position.set(
         entryXZ[0] + (aspect < 1 ? 0 : 4),
-        aspect < 1 ? 5 : 6.5,
-        entryXZ[1] - (aspect < 1 ? 24 : 23),
+        aspect < 1 ? 4.5 : 5.8,
+        entryXZ[1] - (aspect < 1 ? 24 : 17.5),
       );
     } else {
       controls.target.set(shopXZ[0], 16, shopXZ[1]);
@@ -464,40 +461,6 @@ function addFrontage() {
       "Photograph rectified proportions; dimensions approximate, no surveyed indoor plan",
   };
   city.add(frontage);
-  const box = (w, h, d, x, y, z, color) => {
-    const material = new THREE.MeshStandardMaterial({ color, roughness: 1 });
-    material.userData.dayColor = color;
-    material.userData.inkSolid = color === 0x17181a;
-    frontMaterials.push(material);
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    frontage.add(mesh);
-    return mesh;
-  };
-  // All photo panels use one pixel-to-metre frame: sign width 198px = 3.2m,
-  // image ground at y575. Absolute scale is approximate; relative sizes are measured.
-  box(16, 9.3, 0.18, 5.5, 4.65, -0.24, 0x9b9487);
-  // Actual open entrance: separate jambs/head and a recessed back, not a flat black board.
-  box(3.2, 1.65, 0.08, 0, 0.82, 0.8, 0x17181a);
-  box(0.16, 1.65, 1.3, -1.66, 0.82, 0.2, 0xc1bbb0);
-  box(0.16, 1.65, 1.3, 1.66, 0.82, 0.2, 0xc1bbb0);
-  box(3.48, 0.16, 1.3, 0, 1.73, 0.2, 0xc1bbb0);
-  // Foreground wall covers the generated facade; the opening remains visibly dark.
-  box(3.2, 1.65, 0.06, 0, 0.82, -0.46, 0x17181a);
-  box(3.5, 2.55, 0.35, 0, 3, -0.35, 0x397d57);
-  for (const x of [-1.81, 5.24]) {
-    box(0.42, 9.3, 0.25, x, 4.65, -0.45, 0x76534b);
-    for (let y = 0.3; y < 9.3; y += 0.18)
-      box(0.43, 0.012, 0.015, x, y, -0.59, 0x443735);
-  }
-  for (const x of [-1.35, 0.4]) {
-    box(0.045, 0.7, 0.045, x, 0.35, -0.9, 0xb4b0a4);
-    box(0.045, 0.045, 1.2, x, 0.7, -1.3, 0xb4b0a4);
-  }
-  box(16, 0.16, 3.5, 5.5, -0.04, -2.2, 0xb8b6aa);
-  box(16, 0.3, 0.2, 5.5, -0.1, -4, 0x8a887e);
 }
 function drawLocator(data) {
   const map = document.querySelector("#locator"),
@@ -626,7 +589,7 @@ async function start() {
     controls.enableDamping = false;
     controls.minDistance = 8;
     controls.maxDistance = 1400;
-    controls.maxPolarAngle = Math.PI * 0.47;
+    controls.maxPolarAngle = Math.PI * 0.53;
     controls.screenSpacePanning = false;
     controls.touches.ONE = THREE.TOUCH.ROTATE;
     controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
@@ -684,6 +647,7 @@ async function start() {
       o.castShadow = true;
       o.receiveShadow = true;
       if (o.name === "buildings" || o.name === "buildingsDetail") {
+        refineLandmarkMasses(o);
         computeBoundsTree.call(o.geometry);
         o.raycast = acceleratedRaycast;
         collisionMeshes.push(o);
@@ -702,9 +666,7 @@ async function start() {
     imported.scene.traverse((o) => {
       if (!o.isMesh || !o.name.startsWith("tree_")) return;
       const blocks = (point) =>
-        Math.abs(point.x - entryXZ[0]) < 8 &&
-        point.z > entryXZ[1] - 18 &&
-        point.z < entryXZ[1] + 3;
+        point.x > -130 && point.x < 60 && point.z > -125 && point.z < 65;
       if (o.isInstancedMesh) {
         o.geometry.computeBoundingBox();
         const center = o.geometry.boundingBox.getCenter(new THREE.Vector3());
@@ -728,13 +690,17 @@ async function start() {
         if (blocks(point)) obstructingTrees.push(o);
       }
     });
-    // Photo evidence takes precedence over generated vegetation at this doorway.
+    // The exported tool distributes decorative trees, not surveyed trees. Omit
+    // these throughout the illustrated intersection so they cannot conceal signs.
     obstructingTrees.forEach((o) => o.removeFromParent());
     const lowTrees = await loader.loadAsync("./susukino-trees-low.glb");
     lowTrees.scene.traverse((o) => {
       if (!o.isMesh) return;
       // Singleton trees already exist in the detailed model; do not overlay a second copy.
-      if (!o.isInstancedMesh) {o.visible=false;return;}
+      if (!o.isInstancedMesh) {
+        o.visible = false;
+        return;
+      }
       o.castShadow = true;
       o.receiveShadow = true;
       const list = Array.isArray(o.material) ? o.material : [o.material];
@@ -749,7 +715,14 @@ async function start() {
     updateTreeLOD = makeTreeLOD(imported.scene, lowTrees.scene);
     city.add(imported.scene);
     addFrontage();
-    photoMaterials = await addPhotoFacade(frontage);
+    photoMaterials = [
+      ...(await addPhotoFacade(frontage)),
+      ...(await addIllustratedStreet(city)),
+    ];
+    city.userData.artworkSources = artworkSources;
+    city.userData.artworkAttribution = artworkCredits;
+    document.documentElement.dataset.artworkFacades =
+      "yokocho,nikka,asahi,north-block,toyoko";
     const marker = new THREE.Mesh(
       new THREE.CylinderGeometry(0.65, 0.65, 80, 8),
       new THREE.MeshBasicMaterial({ color: 0xce3035 }),
@@ -805,7 +778,7 @@ async function start() {
       if (e.key === "ArrowLeft") s.theta -= 0.12;
       if (e.key === "ArrowRight") s.theta += 0.12;
       if (e.key === "ArrowUp") s.phi = Math.max(0.1, s.phi - 0.1);
-      if (e.key === "ArrowDown") s.phi = Math.min(Math.PI * 0.47, s.phi + 0.1);
+      if (e.key === "ArrowDown") s.phi = Math.min(Math.PI * 0.53, s.phi + 0.1);
       if (e.key === "+" || e.key === "=")
         s.radius = Math.max(8, s.radius * 0.9);
       if (e.key === "-") s.radius = Math.min(1400, s.radius * 1.1);
@@ -847,7 +820,7 @@ async function start() {
         render();
         const image = document.createElement("canvas");
         image.width = width;
-        image.height = height + 110;
+        image.height = height + 140;
         const ctx = image.getContext("2d");
         ctx.fillStyle = mode === "night" ? "#12121d" : "#faf8f3";
         ctx.fillRect(0, 0, width, image.height);
@@ -861,6 +834,13 @@ async function start() {
         );
         ctx.font = "24px sans-serif";
         ctx.fillText(credits, 24, height + 80);
+        ctx.font = "20px sans-serif";
+        ctx.fillText(
+          artworkCredits +
+            " / 漫画翻案・一部省略 / tubasa-susukino.com/location/artwork-sources.md",
+          24,
+          height + 115,
+        );
         const blob = await new Promise((resolve) => image.toBlob(resolve));
         if (!blob) throw Error("PNG encoding failed");
         save(blob, "tsubasa-susukino-" + mode + ".png");

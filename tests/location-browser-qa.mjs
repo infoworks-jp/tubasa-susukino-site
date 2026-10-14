@@ -169,8 +169,23 @@ for (const viewport of [
         colors.add(`${png.data[i]},${png.data[i + 1]},${png.data[i + 2]}`);
       }
     assert.ok(colors.size > 20, mode + " must render real geometry");
+    if (mode === "line" || mode === "tone") {
+      let chromatic = 0,
+        sampled = 0;
+      for (let y = 90; y < png.height - 130; y += 5)
+        for (let x = 30; x < png.width - 70; x += 5) {
+          const i = (y * png.width + x) * 4,
+            rgb = [...png.data.subarray(i, i + 3)];
+          sampled++;
+          if (Math.max(...rgb) - Math.min(...rgb) > 25) chromatic++;
+        }
+      assert.ok(
+        chromatic / sampled < 0.02,
+        "artwork mask must not bypass monochrome for ordinary geometry",
+      );
+    }
   }
-  for (const view of ["crossing", "shop", "overview"]) {
+  for (const view of ["crossing", "north", "shop", "overview"]) {
     await page.locator(`[data-view="${view}"]`).click();
     const state = await page.evaluate(() =>
       JSON.parse(document.documentElement.dataset.cameraState),
@@ -302,9 +317,25 @@ for (const viewport of [
         "export contains the photograph-aligned entrance sign",
       );
       assert.ok(
-        json.images?.length > 0,
-        "export preserves the licensed photograph texture",
+        json.images?.length >= 3,
+        "export preserves the three licensed manga facade textures",
       );
+      for (const name of [
+        "Nikka / corner facade",
+        "Asahi / corner advertisement",
+        "Toyoko Inn / south frontage",
+      ])
+        assert.ok(
+          json.nodes.some((n) => n.name === name),
+          `export preserves ${name}`,
+        );
+      const artwork = json.nodes.find((n) => n.extras?.artworkSources)?.extras;
+      assert.equal(
+        artwork?.artworkSources.length,
+        3,
+        "export retains all source photograph records",
+      );
+      assert.ok(artwork.artworkAttribution.includes("MIKI Yoshihito"));
       const landmark = json.nodes.find((n) => n.extras?.landmarks)?.extras
         .landmarks;
       assert.deepEqual(landmark.shop.coordinates, [141.3544949, 43.055336]);

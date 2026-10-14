@@ -9,6 +9,24 @@ export class MangaRenderer {
       depthTexture: new THREE.DepthTexture(1, 1),
     });
     this.normalMaterial = new THREE.MeshNormalMaterial();
+    // Alpha is a material mask, not transparency. Authored ink must survive
+    // the post-process without being thresholded or halftoned a second time.
+    this.normalMaterial.defaultAttributeValues = { inkArtwork: [0] };
+    this.normalMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader =
+        "attribute float inkArtwork; varying float artworkMask;\n" +
+        shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\n artworkMask = inkArtwork;",
+      );
+      shader.fragmentShader =
+        "varying float artworkMask;\n" + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        /\n}\s*$/,
+        "\n gl_FragColor.a = artworkMask;\n}",
+      );
+    };
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         colorMap: { value: this.color.texture },
@@ -47,12 +65,15 @@ export class MangaRenderer {
           paper=mix(vec3(1.),vec3(.008),dotInk);
           paper=mix(paper,vec3(.003),1.-smoothstep(.035,.16,l));
         }
-        gl_FragColor=vec4(mix(paper,vec3(.004),edge),1.);
+        float artwork=texture2D(normalMap,uv0).a;
+        if(d<far*.99) paper=mix(paper,base,step(.5,artwork));
+        gl_FragColor=vec4(mix(paper,vec3(.004),edge*(1.-artwork*.8)),1.);
         #include <colorspace_fragment>
       }`,
       depthTest: false,
       depthWrite: false,
     });
+    this.overlay = new THREE.Scene();
     this.scene = new THREE.Scene();
     this.camera = new THREE.Camera();
     this.scene.add(
@@ -92,12 +113,25 @@ export class MangaRenderer {
     scene.overrideMaterial = override;
     scene.background = background;
     hidden.forEach(([o, v]) => (o.visible = v));
+    this.overlay.clear();
+    for (const [object, visible] of hidden) {
+      if (object.isSprite && visible) {
+        this.overlay.add(object.clone());
+        object.visible = false;
+      }
+    }
     renderer.setRenderTarget(this.color);
     renderer.render(scene, camera);
+    hidden.forEach(([o, v]) => (o.visible = v));
     document.documentElement.dataset.mangaTriangles = String(
       renderer.info.render.triangles,
     );
     renderer.setRenderTarget(target);
     renderer.render(this.scene, this.camera);
+    const autoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    renderer.clearDepth();
+    renderer.render(this.overlay, camera);
+    renderer.autoClear = autoClear;
   }
 }

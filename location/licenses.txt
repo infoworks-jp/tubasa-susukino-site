@@ -102,3 +102,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Illustrated facade artwork (2026-10-14):
+See artwork-sources.md for the source photograph titles, authors, dates, links,
+adaptation descriptions and derivative licenses. These photographs are used
+with the stated reuse permissions; no Google Street View imagery is used.
+Nikka adaptation: x768 (CC BY-SA 2.0) and ノボホショコロトソ (CC BY 4.0).
+Derivative nikka-facade.png: CC BY-SA 4.0.
+North block adaptation: MIKI Yoshihito (CC BY 2.0).
+Derivative north-facades.png: CC BY 4.0.
+Yokocho illustration: user-authorized photograph and approved manga direction.
+The illustrations reflect their source dates, contain simplified details and
+are not a current survey of every building or advertisement.
