@@ -12,7 +12,7 @@ export const routeBuildings = [
       [-7.96, 8.62],
       [-38.94, 13.85],
     ],
-    height: 33,
+    height: 25.45,
   },
   {
     name: "Susukino Koban",
@@ -33,7 +33,7 @@ export const routeBuildings = [
       [45.71, 7.31],
       [-5.35, 16.47],
     ],
-    height: 33,
+    height: 27.3,
   },
 ];
 export const routeAtlas = {
@@ -67,7 +67,37 @@ export const entranceAtlas = {
   date: "撮影日未確認",
   license: "Used with permission",
 };
-export const routeAtlases = [routeAtlas, kobanAtlas, entranceAtlas];
+// These two atlases are independent illustrations of the confirmed ad layout.
+// They contain no Google Maps/Street View imagery. Keep photo and redraw dates
+// separate in the downloadable model and credits.
+export const greenNo3Atlas = {
+  file: "./assets/manga/green-no3-signs-2025.webp",
+  originalSize: [2400, 2150],
+  measurementSize: [2400, 2150],
+  crop: [0, 0, 2400, 2150],
+  source:
+    "Independently drawn signage; user reference dated August 2025; official tenant directory: https://www.susukino-greenbuilding.com/tenants_cat/no3-gb-8f/",
+  author: "味一番つばさサイト制作",
+  date: "2025-08 reference / 2026-10-14 redraw",
+  license:
+    "Site-created illustration; depicted brand marks belong to their respective owners",
+  illustration: true,
+};
+export const greenNo2Atlas = {
+  ...greenNo3Atlas,
+  file: "./assets/manga/green-no2-signs-2025.webp",
+  originalSize: [1600, 3200],
+  measurementSize: [1600, 3200],
+  crop: [0, 0, 1600, 3200],
+  source:
+    "Independently drawn signage; names, colours and ordering from user reference dated August 2025",
+};
+export const routeAtlases = [
+  greenNo2Atlas,
+  greenNo3Atlas,
+  kobanAtlas,
+  entranceAtlas,
+];
 export function edgePoint(building, t) {
   const [west, east] = routeBuildings[building].ring;
   return [east[0] + (west[0] - east[0]) * t, east[1] + (west[1] - east[1]) * t];
@@ -134,7 +164,7 @@ export const routePanels = [
     { depth: 0.12 },
   ),
   panel(
-    "No.2 / Hibiki and PopEye",
+    "No.2 / Hibiki and ACQUA",
     0,
     0.42,
     1,
@@ -170,7 +200,7 @@ export const routePanels = [
     { depth: 0.22 },
   ),
   panel(
-    "No.2 / Lake and Satsudora",
+    "No.2 / Able and Satsudora",
     0,
     0,
     1,
@@ -202,19 +232,19 @@ export const routePanels = [
   // One registration from roof to shop fascia. Independently stretching four
   // horizontal strips used to break the tall signs and shift the lower shops.
   panel(
-    "No.3 / continuous photographed frontage",
+    "No.3 / continuous updated frontage",
     2,
     0,
     1,
     2.3,
-    40.7,
+    30.7,
     [
-      [178, 758],
-      [580, 620],
-      [544, 1235],
-      [121, 1251],
+      [0, 0],
+      [2400, 0],
+      [2400, 2150],
+      [0, 2150],
     ],
-    { offset: 0.025 },
+    { offset: 0.025, atlas: greenNo3Atlas },
   ),
   // Current police-box front, split around its step-back and entrance frame.
   panel(
@@ -450,4 +480,41 @@ routePanels.push(
   ]),
 );
 
+const no2Rects = [
+  [0, 0, 1600, 780],
+  [0, 780, 1600, 1450],
+  [0, 1450, 1600, 1750],
+  [670, 1750, 1600, 2390],
+  [0, 1750, 670, 2390],
+  [0, 2390, 1600, 2670],
+  [0, 2670, 1600, 3065],
+  [0, 3065, 1600, 3200],
+];
+routePanels
+  .filter((p) => p.building === 0)
+  .forEach((p, i) => {
+    const [l, t, r, b] = no2Rects[i];
+    p.q = [
+      [l, t],
+      [r, t],
+      [r, b],
+      [l, b],
+    ];
+    p.atlas = greenNo2Atlas;
+  });
+// Remove photographic repeats of the four signs/bays now present in the
+// continuous updated frontage. The actual alley sign, doorway and lower glass
+// photograph stay in place. Each ad appears once, including in GLB exports.
+const supersededEntrance = new Set([
+  "Yokocho / Uosen lettering",
+  "Yokocho / Lake broad fascia",
+  "Yokocho / upper railing",
+  "Yokocho / champagne billboard",
+]);
+for (let i = routePanels.length - 1; i >= 0; i--)
+  if (supersededEntrance.has(routePanels[i].name)) routePanels.splice(i, 1);
+for (const p of routePanels.filter((p) => p.building === 0)) {
+  p.bottom = 2.3 + ((p.bottom - 2.3) * 30.7) / 40.7;
+  p.height *= 30.7 / 40.7;
+}
 configureRouteRelief(routePanels);

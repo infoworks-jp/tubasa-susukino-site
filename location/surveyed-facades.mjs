@@ -27,7 +27,7 @@ export async function addSurveyedFacades(
     sources: atlases,
     panelCount: panels.length,
     technique:
-      "Perspective-correct photographic facade UVs, measured footprint edges, shallow architectural relief. No generated lettering.",
+      "Perspective-correct photo UVs and explicitly credited independent sign illustrations, registered to mapped footprint edges with shallow architectural relief.",
     limitations:
       "Dates are recorded per photo source. Heights and relief are approximate; hidden facade areas and interior shops are not reconstructed.",
   };
@@ -80,7 +80,9 @@ export async function addSurveyedFacades(
     mesh.castShadow = true;
     mesh.userData = {
       source: atlas.source,
-      photoDate: atlas.date,
+      photoDate: atlas.illustration ? null : atlas.date,
+      illustrationDate: atlas.illustration ? atlas.date : null,
+      illustration: !!atlas.illustration,
       license: atlas.license,
       measuredPhotoCorners: q,
       architecturalRelief: panel.relief || [],

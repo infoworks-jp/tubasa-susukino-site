@@ -137,8 +137,16 @@ function makePolygonRelief(panel, atlas) {
     (0.5 - v) * panel.height,
     z,
   ];
+  // An affine quadrilateral has exact ordinary UV interpolation; subdivision
+  // is only necessary for photographic perspective. Retain the original depth
+  // for all projective photos, including future non-rectangular illustrations.
+  const affine =
+    Math.hypot(
+      panel.q[0][0] - panel.q[1][0] + panel.q[2][0] - panel.q[3][0],
+      panel.q[0][1] - panel.q[1][1] + panel.q[2][1] - panel.q[3][1],
+    ) < 1e-8;
   function triangle(a, b, c, z, level = 0) {
-    if (level < 5) {
+    if (level < (affine ? 0 : 5)) {
       const mid = (a, b) => a.map((v, i) => (v + b[i]) / 2);
       const ab = mid(a, b),
         bc = mid(b, c),

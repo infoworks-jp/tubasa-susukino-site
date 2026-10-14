@@ -182,12 +182,12 @@ for (const viewport of [
     await page.evaluate(() =>
       Number(document.documentElement.dataset.routePanels),
     ),
-    27,
+    23,
   );
   assert.ok(
     Number(
       await page.evaluate(() => document.documentElement.dataset.routeRelief),
-    ) === 10,
+    ) === 9,
     "route has real window/reveal geometry, not only flat photo panels",
   );
   const pavement = await page.evaluate(() =>
@@ -505,7 +505,7 @@ for (const viewport of [
       );
       assert.ok(
         json.images?.length >= 8,
-        "export preserves one manga texture, five street photo atlases and two PLATEAU photo atlases",
+        "export preserves manga, photographs, updated sign illustrations and PLATEAU atlases",
       );
       for (const name of [
         "Nikka / corner facade",
@@ -522,8 +522,8 @@ for (const viewport of [
       const artwork = json.nodes.find((n) => n.extras?.artworkSources)?.extras;
       assert.equal(
         artwork?.artworkSources.length,
-        7,
-        "export retains all source photograph records",
+        8,
+        "export retains all photograph and illustration source records",
       );
       assert.ok(artwork.artworkAttribution.includes("MIKI Yoshihito"));
       assert.ok(artwork.artworkAttribution.includes("jegal gihwan"));
@@ -534,17 +534,38 @@ for (const viewport of [
       assert.equal(photographed.extras.sources.length, 2);
       assert.equal(
         json.nodes.filter((n) => n.extras?.measuredPhotoCorners).length,
-        55,
+        51,
       );
       const route = json.nodes.find(
         (n) => n.name === "Susukino / Route 36 to Yokocho",
       );
-      assert.equal(route.extras.panelCount, 27);
-      assert.equal(route.extras.sources.length, 3);
+      assert.equal(route.extras.panelCount, 23);
+      assert.equal(route.extras.sources.length, 4);
+      assert.equal(
+        route.extras.sources.filter((s) => s.illustration).length,
+        2,
+      );
+      assert.ok(
+        !route.extras.sources.some((s) => s.file.includes("route-2018")),
+      );
+      const updatedSigns = json.nodes.filter((n) => n.extras?.illustration);
+      assert.equal(
+        updatedSigns.length,
+        9,
+        "No.2 and No.3 export all updated sign surfaces",
+      );
+      assert.ok(
+        updatedSigns.every(
+          (n) =>
+            n.extras.photoDate === null &&
+            n.extras.illustrationDate.includes("2025-08"),
+        ),
+        "drawings are not misidentified as source photographs",
+      );
       for (const name of [
         "No.2 / Maruhan roof sign",
         "Koban / POLICE and wall lettering",
-        "No.3 / continuous photographed frontage",
+        "No.3 / continuous updated frontage",
       ])
         assert.ok(json.nodes.some((n) => n.name === name));
       assert.ok(

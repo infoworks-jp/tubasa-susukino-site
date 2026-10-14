@@ -130,7 +130,7 @@ North intersection photographic facade textures (2026-10-14 update):
   Source: https://unsplash.com/photos/a-city-street-at-night-with-cars-and-billboards-qsB8WZkPBZs
 Changes: lossless technical crops, facade perspective projection, shallow geometric relief, real-time monochrome/halftone conversion. No regenerated sign lettering. See artwork-sources.md for crop coordinates and limitations.
 
-Route 36 / No.2 and No.3 Green Buildings photo panels:
+Archived Route 36 photo (route-2018.webp; not loaded by current viewer or exports):
 Choi2451, Susukino, Sapporo at night on July 17th, 2018, CC BY-SA 4.0.
 https://commons.wikimedia.org/wiki/File:Susukino,_Sapporo_at_night_on_July_17th,_2018.jpg
 Susukino Koban front/east photo panels:
@@ -139,3 +139,13 @@ https://commons.wikimedia.org/wiki/File:Susukino_Koban_202203.jpg
 https://creativecommons.org/licenses/by-sa/4.0/
 Changes: orientation normalization, cropping, WebP encoding, perspective UV projection and manga shader. Adapted photo portions remain CC BY-SA 4.0. Advertisements reflect the source dates.
 Yokocho photo panels: user-supplied photograph, usage permission confirmed 2026-10-14.
+
+Current No.2 / No.3 Green Building signage (2026-10-14):
+assets/manga/green-no2-signs-2025.svg and .webp
+assets/manga/green-no3-signs-2025.svg and .webp
+Independently drawn by the Tsubasa site production, from sign names, colours
+and arrangement in an August 2025 reference. No Google Maps/Street View pixels
+are embedded. Lettering, mascots and advertisement pictures are illustrative,
+not exact reproductions. Depicted trademarks belong to their respective owners.
+These illustrations are not licensed under the archived source photo's CC terms.
+Source generator: scripts/build-green-signs.mjs. See artwork-sources.md.

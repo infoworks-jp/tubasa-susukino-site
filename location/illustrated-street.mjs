@@ -3,7 +3,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { loadArtwork, artworkPlane, outlinedBox } from "./artwork.mjs";
 import { routeBuildings, routeAtlases } from "./route-facades.mjs";
 export const artworkCredits =
-  "写真: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0), jegal gihwan (Unsplash), Choi2451 / 禁樹なずな (CC BY-SA 4.0), 提供写真";
+  "写真: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0), jegal gihwan (Unsplash), 禁樹なずな (CC BY-SA 4.0), 提供写真 / グリーンビル広告: 2025年資料から独自作画";
 export const artworkSources = [
   {
     author: "x768",
@@ -36,6 +36,7 @@ artworkSources.push(
     date: a.date,
     url: a.source,
     license: a.license,
+    illustration: !!a.illustration,
   })),
 );
 // Map footprints; facade heights are documented approximations where no

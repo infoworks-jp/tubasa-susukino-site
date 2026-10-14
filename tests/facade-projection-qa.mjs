@@ -67,7 +67,7 @@ for (const atlas of [photoAtlas, baseAtlas, ...routeAtlases]) {
   assert.ok(data.length < 6_000_000);
 }
 console.log(
-  `PASS: ${allPanels.length} photo panels, exact measured corners, perspective, UV bounds, winding and licensed atlas files`,
+  `PASS: ${allPanels.length} facade panels, registered corners, perspective, UV bounds, winding and attributed atlas files`,
 );
 
 // All panels along the requested route must follow their own mapped building,
@@ -263,13 +263,13 @@ console.log(
   `PASS: ${recessedOpenings} real recessed openings, perpendicular returns, ${pavement.samples.length} mapped pavement stations and single sign colour mask`,
 );
 
-// Regression: a photographed vertical sign must not be stretched independently
-// at floor boundaries. No.3 uses one registration and measured polygon edges.
+// Regression: a continuous vertical sign must not be stretched independently
+// at floor boundaries. No.3 uses one registration and artwork polygon edges.
 const no3 = routePanels.filter((p) => p.name.startsWith("No.3 /"));
 assert.equal(
   no3.length,
   1,
-  "No.3 sign stack has one continuous photo registration",
+  "No.3 sign stack has one continuous artwork registration",
 );
 for (const feature of no3[0].relief) {
   assert.equal(feature.polygon.length, 4);
@@ -280,19 +280,54 @@ for (const feature of no3[0].relief) {
         pt[0] - feature.photoCorners[i][0],
         pt[1] - feature.photoCorners[i][1],
       ) < 0.01,
-      "case edge follows measured sign, not guessed rectangle",
+      "case edge follows the exact sign artwork boundary",
     );
   });
 }
 console.log(
-  "PASS: unbroken No.3 registration and photo-measured sign-case polygons",
+  "PASS: unbroken No.3 registration and artwork-aligned sign-case polygons",
 );
 
 const registered = no3[0];
+assert.equal(registered.atlas.illustration, true);
+assert.equal(registered.relief.length, 13);
+assert.ok(
+  routePanels.every((p) => p.atlas.file !== "./assets/manga/route-2018.webp"),
+  "obsolete 2018 ads are not rendered or exported",
+);
+for (const name of [
+  "Yokocho / Uosen lettering",
+  "Yokocho / Lake broad fascia",
+  "Yokocho / upper railing",
+  "Yokocho / champagne billboard",
+])
+  assert.ok(
+    !routePanels.some((p) => p.name === name),
+    "no duplicated entrance overlay: " + name,
+  );
+const signSVG = await fs.readFile(
+  new URL("../location/assets/manga/green-no3-signs-2025.svg", import.meta.url),
+  "utf8",
+);
+for (const ad of [
+  "まねきねこ",
+  "Seicomart",
+  "プロミス",
+  "HATHYR",
+  "ワタショウ",
+  "レイク",
+])
+  assert.ok(signSVG.includes(ad), "updated ad identity: " + ad);
+for (const ad of ["BIG ECHO", "PROMISE", "白生"])
+  assert.ok(!signSVG.includes(ad), "obsolete ad is absent: " + ad);
+assert.ok(
+  !/<image\b|https:\/\/.*(?:google|gstatic)/i.test(signSVG),
+  "sign art contains no embedded reference screenshots",
+);
 for (const feature of registered.relief)
   assert.ok(
     feature.polygon.flat().every((v) => v > 0 && v < 1),
-    "sign cases fit inside shared photo plane",
+    "sign cases fit inside shared artwork plane",
   );
 const continuous = makeReliefGeometry(registered, registered.atlas);
 const registeredMesh = new THREE.Mesh(

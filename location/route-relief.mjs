@@ -198,62 +198,62 @@ export function configureRouteRelief(panels) {
       label: "right shop glass",
     },
   ];
-  p = get("Yokocho / upper railing");
-  p.offset = 0.22;
-  p.relief = [
-    {
-      rect: [0.06, 0.07, 0.92, 0.8],
-      depth: -0.15,
-      label: "wall behind metal balustrade",
-    },
-  ];
   p = get("No.2 / lounge signs");
   p.relief = [
     {
-      rect: [0.02, 0.04, 0.41, 0.96],
+      rect: [0.008125, 0.043333, 0.473125, 0.956667],
       depth: 0.13,
       label: "left individual sign case",
     },
-    { rect: [0.43, 0.04, 0.72, 0.96], depth: 0.07, label: "middle sign case" },
-    { rect: [0.74, 0.04, 0.98, 0.96], depth: 0.18, label: "right sign case" },
+    { rect: [0.489375, 0.043333, 0.72625, 0.956667], depth: 0.07, label: "middle sign case" },
+    { rect: [0.7425, 0.043333, 0.991875, 0.956667], depth: 0.18, label: "right sign case" },
   ];
-  p = get("No.3 / continuous photographed frontage");
-  // Actual sign corners in the 1824 × 1368 photo. Keep the quadrilaterals;
-  // axis-aligned guessed boxes sliced through lettering and made false ledges.
-  p.relief = [
-    {
-      photoCorners: [
-        [176, 884],
-        [286, 855],
-        [276, 939],
-        [158, 968],
-      ],
-      depth: 0.3,
-      label: "Big Echo sign case",
-    },
-    {
-      photoCorners: [
-        [280, 952],
-        [383, 928],
-        [362, 1081],
-        [260, 1091],
-      ],
-      depth: 0.29,
-      label: "PROMISE sign case",
-    },
-    {
-      photoCorners: [
-        [440, 799],
-        [497, 776],
-        [448, 1157],
-        [399, 1165],
-      ],
-      depth: 0.42,
-      label: "continuous vertical sign case",
-    },
-  ].map((r) => ({
-    ...r,
-    polygon: r.photoCorners.map((pt) => unprojectPhoto(p.q, pt)),
-  }));
+  p = get("No.3 / continuous updated frontage");
+  // Every case is registered to one uninterrupted atlas. Depths remain modelling
+  // estimates. The ad facts are August 2025; these coordinates are the redraw.
+  const cases = [
+    [38, 421, 1358, 836, 0.3, "Manekineko"],
+    [1367, 421, 1819, 836, 0.25, "Koronagirai"],
+    [38, 844, 884, 1290, 0.25, "Seicomart"],
+    [891, 844, 1819, 1475, 0.29, "Promise yellow Japanese sign"],
+    [38, 1298, 452, 1475, 0.24, "Torikizoku"],
+    [459, 1298, 884, 1475, 0.24, "Gyu-Kaku"],
+    [38, 1483, 524, 1686, 0.2, "En"],
+    [531, 1483, 761, 1686, 0.2, "nicolico"],
+    [768, 1483, 1349, 1686, 0.2, "Watasho"],
+    [1356, 1483, 1819, 1686, 0.2, "Uosen"],
+    [857, 1694, 1331, 1797, 0.18, "Lake east"],
+    [1339, 1694, 1819, 1797, 0.18, "Lake west"],
+    [2100, 421, 2379, 1860, 0.42, "continuous HATHYR case"],
+  ];
+  p.relief = cases.map(([l, t, r, b, depth, label]) => {
+    const bands = [
+      [0, 404, 0, 404],
+      [404, 836, 404, 836],
+      [836, 1483, 836, 1667],
+      [1483, 1686, 1667, 1808],
+      [1686, 1815, 1808, 1933],
+      [1815, 1998, 1933, 2016],
+      [1998, 2150, 2016, 2150],
+    ];
+    const xy = (x, y) => {
+      if (x >= 2100) return [2160 + ((x - 2100) * 240) / 300, y];
+      if (x >= 1830) return [1920 + ((x - 1830) * 240) / 270, y];
+      const [a, b, c, d] = bands.find(([a, b]) => y >= a && y <= b);
+      return [(x * 1920) / 1830, c + ((y - a) * (d - c)) / (b - a)];
+    };
+    const photoCorners = [
+      [l, t],
+      [r, t],
+      [r, b],
+      [l, b],
+    ].map(([x, y]) => xy(x, y));
+    return {
+      depth,
+      label,
+      photoCorners,
+      polygon: photoCorners.map((pt) => unprojectPhoto(p.q, pt)),
+    };
+  });
   return panels;
 }
