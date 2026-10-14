@@ -17,6 +17,7 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { MangaRenderer } from "./manga-renderer.mjs";
 import {
   loadPlateau,
+  loadPlateauTextures,
   replaceProceduralMasses,
   plateauCredit,
   plateauSource,
@@ -32,7 +33,6 @@ import { addRouteArchitecture } from "./route-architecture.mjs";
 import { landmarks } from "./landmarks.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 performance.mark("city-load-start");
-const yieldToBrowser = () => new Promise((resolve) => setTimeout(resolve, 0));
 let detailState = "loading";
 const canvas = document.querySelector("#city"),
   status = document.querySelector("#status");
@@ -753,9 +753,10 @@ async function start() {
     addFrontage();
     // Only the arrival route competes for initial bandwidth. Independent core
     // resources start together; photographic surroundings are a second stage.
-    const [imported, lowTrees, ...coreArtwork] = await Promise.all([
+    const [imported, lowTrees, plateau, ...coreArtwork] = await Promise.all([
       loader.loadAsync("./susukino-detail.glb"),
       loader.loadAsync("./susukino-trees-low.glb"),
+      loadPlateau(loader, streetClipPlanes.map((p) => new THREE.Plane(p.normal, 235))),
       addPhotoFacade(frontage),
       addIllustratedStreet(city),
       addSurveyedFacades(city, routePanels, routeAtlases,
@@ -771,12 +772,14 @@ async function start() {
       limitations:
         "Procedural facades, signs and roof equipment are not surveyed real architecture",
     };
+    let replacedTriangles = 0;
     imported.scene.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = true;
       o.receiveShadow = true;
       if (o.name === "buildings" || o.name === "buildingsDetail") {
         refineLandmarkMasses(o);
+        replacedTriangles += replaceProceduralMasses(o, plateau.features);
         computeBoundsTree.call(o.geometry);
         o.raycast = acceleratedRaycast;
         collisionMeshes.push(o);
@@ -842,6 +845,18 @@ async function start() {
     city.add(lowTrees.scene);
     updateTreeLOD = makeTreeLOD(imported.scene, lowTrees.scene);
     city.add(imported.scene);
+    city.add(plateau.group);
+    plateau.group.traverse((o) => {
+      if (!o.isMesh) return;
+      computeBoundsTree.call(o.geometry);
+      o.raycast = acceleratedRaycast;
+      collisionMeshes.push(o);
+    });
+    plateauMaterials = plateau.materials;
+    city.userData.plateau = plateauSource;
+    document.documentElement.dataset.plateauBuildings = String(plateau.features.length);
+    document.documentElement.dataset.plateauReplacedTriangles = String(replacedTriangles);
+    document.documentElement.dataset.collisionMeshes = String(collisionMeshes.length);
     const routeArchitecture = addRouteArchitecture(city, imported.scene);
     routeArchitecture.materials.forEach((m) => {
       m.userData.dayColor = m.color.getHex();
@@ -1054,36 +1069,14 @@ async function start() {
     performance.mark("city-interactive");
     try {
       const north = new THREE.Group();
-      const [plateau, northMaterials] = await Promise.all([
-        loadPlateau(loader, streetClipPlanes.map((p) => new THREE.Plane(p.normal, 235))),
+      const [, northMaterials] = await Promise.all([
+        loadPlateauTextures(plateau),
         addSurveyedFacades(north),
       ]);
       performance.mark("city-surroundings-downloaded");
-      // Prepare off-scene before replacing the provisional map buildings.
-      const meshes = [];
-      plateau.group.traverse((o) => { if (o.isMesh) meshes.push(o); });
-      for (const mesh of meshes) {
-        computeBoundsTree.call(mesh.geometry);
-        mesh.raycast = acceleratedRaycast;
-        await yieldToBrowser();
-      }
       if (renderer.getContext().isContextLost()) return;
-      let replacedTriangles = 0;
-      imported.scene.traverse((o) => {
-        if (!["buildings", "buildingsDetail"].includes(o.name)) return;
-        replacedTriangles += replaceProceduralMasses(o, plateau.features);
-        computeBoundsTree.call(o.geometry);
-      });
-      city.add(plateau.group);
       for (const group of [...north.children]) city.add(group);
-      collisionMeshes.push(...meshes);
-      floorCache.x = NaN;
-      plateauMaterials = plateau.materials;
       photoMaterials.push(...northMaterials);
-      city.userData.plateau = plateauSource;
-      document.documentElement.dataset.plateauBuildings = String(plateau.features.length);
-      document.documentElement.dataset.plateauReplacedTriangles = String(replacedTriangles);
-      document.documentElement.dataset.collisionMeshes = String(collisionMeshes.length);
       let totalVertices = 0;
       city.traverse((o) => {
         if (o.isMesh) totalVertices += o.geometry.attributes.position?.count ?? 0;
@@ -1097,6 +1090,7 @@ async function start() {
       document.documentElement.dataset.cityReady = "true";
       performance.mark("city-complete");
     } catch (error) {
+      if (renderer.getContext().isContextLost()) return;
       console.warn("[Tsubasa Location surroundings]", error);
       detailState = "error";
       describeMode();

@@ -92,21 +92,21 @@ export async function loadPlateau(loader, clippingPlanes) {
   group.name = "Susukino / PLATEAU photographed architecture 2020";
   group.userData = { ...plateauSource };
   const features = [],
-    materials = [];
+    materials = [],
+    photographs = [];
   const tiles = await Promise.all(["data30", "data44"].map(
-    (name) => loader.loadAsync("./assets/plateau/" + name + ".glb"),
+    (name) => loader.loadAsync("./assets/plateau/" + name + ".geometry.glb"),
   ));
-  for (const result of tiles) {
+  for (const [index, result] of tiles.entries()) {
     features.push(...result.userData.buildings);
     result.scene.traverse((o) => {
       if (!o.isMesh) return;
-      const texture = o.material.map;
-      if (texture) {
-        texture.anisotropy = 8;
+      const photographic = o.material.userData.deferredPhotograph;
+      if (photographic) {
         o.material = new THREE.MeshBasicMaterial({
-          map: texture,
           side: THREE.DoubleSide,
         });
+        photographs.push({ material: o.material, tile: ["data30", "data44"][index] });
         o.geometry.setAttribute(
           "inkArtwork",
           new THREE.Float32BufferAttribute(
@@ -115,7 +115,7 @@ export async function loadPlateau(loader, clippingPlanes) {
           ),
         );
       }
-      if (!texture)
+      if (!photographic)
         o.geometry.setAttribute(
           "inkArtwork",
           new THREE.Float32BufferAttribute(
@@ -134,5 +134,25 @@ export async function loadPlateau(loader, clippingPlanes) {
   }
   group.userData.buildings = features;
   group.userData.buildingCount = features.length;
-  return { group, features, materials };
+  return { group, features, materials, photographs };
+}
+
+// Geometry and photographic bytes are split without changing either. Keeping
+// exact collision geometry in the first stage prevents later camera jumps.
+export async function loadPlateauTextures(plateau) {
+  const loader = new THREE.TextureLoader();
+  const textures = new Map(await Promise.all(["data30", "data44"].map(async (tile) => {
+    const texture = await loader.loadAsync("./assets/plateau/" + tile + ".webp");
+    texture.flipY = false;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    return [tile, texture];
+  })));
+  for (const {material, tile} of plateau.photographs) {
+    material.map = textures.get(tile);
+    material.needsUpdate = true;
+  }
 }

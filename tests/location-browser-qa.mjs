@@ -660,7 +660,7 @@ await page.locator("#retry").click();
 await page.waitForFunction(
   () => document.documentElement.dataset.cityReady === "true",
 );
-await page.route("**/assets/plateau/data44.glb", (route) =>
+await page.route("**/assets/plateau/data44.webp", (route) =>
   route.fulfill({ status: 503, body: "unavailable" }),
 );
 await page.reload();
@@ -673,7 +673,7 @@ assert.equal(
   false,
   "missing photographed geometry must fail closed",
 );
-await page.unroute("**/assets/plateau/data44.glb");
+await page.unroute("**/assets/plateau/data44.webp");
 await page.locator("#detail-retry button").click();
 await page.waitForFunction(
   () => document.documentElement.dataset.cityReady === "true",

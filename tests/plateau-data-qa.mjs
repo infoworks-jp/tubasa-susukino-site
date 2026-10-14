@@ -83,6 +83,26 @@ for (const [tile, count] of [
         textured += g.accessors[p.attributes.POSITION].count / 3;
     }
   const iv = g.bufferViews[g.images[0].bufferView];
+  const split = await fs.readFile(`location/assets/plateau/${tile}.geometry.glb`);
+  const splitLength = split.readUInt32LE(12);
+  const geometry = JSON.parse(split.subarray(20, 20 + splitLength));
+  const geometryBin = split.subarray(28 + splitLength);
+  assert.equal(geometry.images, undefined, "first-stage model contains no photograph payload");
+  assert.deepEqual(geometry.extras, g.extras, "source facts and footprints survive splitting");
+  assert.deepEqual(geometry.nodes, g.nodes, "exact building transforms survive splitting");
+  assert.deepEqual(geometry.meshes, g.meshes, "exact primitives survive splitting");
+  for (const [i, a] of g.accessors.entries()) {
+    const v = g.bufferViews[a.bufferView];
+    const sv = geometry.bufferViews[geometry.accessors[i].bufferView];
+    assert.deepEqual(
+      geometryBin.subarray(sv.byteOffset, sv.byteOffset + sv.byteLength),
+      bin.subarray(v.byteOffset, v.byteOffset + v.byteLength),
+      "all position/normal/UV bytes are unchanged in the first-stage geometry",
+    );
+  }
+  assert.deepEqual(await fs.readFile(`location/assets/plateau/${tile}.webp`),
+    bin.subarray(iv.byteOffset, iv.byteOffset + iv.byteLength),
+    "deferred photograph is byte-identical, not recompressed");
   assert.equal(bin.toString("ascii", iv.byteOffset, iv.byteOffset + 4), "RIFF");
   assert.equal(
     bin.toString("ascii", iv.byteOffset + 8, iv.byteOffset + 12),
