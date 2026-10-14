@@ -114,3 +114,11 @@ Derivative north-facades.png: CC BY 4.0.
 Yokocho illustration: user-authorized photograph and approved manga direction.
 The illustrations reflect their source dates, contain simplified details and
 are not a current survey of every building or advertisement.
+
+PLATEAU photographed architecture (2020 Sapporo, 85 LOD2 buildings)
+出典：「3D都市モデル（Project PLATEAU）札幌市（2020年度）」（札幌市・国土交通省）を加工して味一番つばさサイトが作成。
+Dataset: https://www.geospatial.jp/ckan/dataset/plateau-01100-sapporo-shi-2020
+Policy: https://www.mlit.go.jp/plateau/site-policy/
+CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Subset, coordinate conversion, ground flattening, lossless UV atlas repacking and runtime manga rendering. Source photography is historical and varies in resolution. See plateau-sources.md.
+Build-time Draco decoder: Apache License 2.0, https://github.com/google/draco

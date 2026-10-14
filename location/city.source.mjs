@@ -15,6 +15,12 @@ import { computeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { MangaRenderer } from "./manga-renderer.mjs";
+import {
+  loadPlateau,
+  replaceProceduralMasses,
+  plateauCredit,
+  plateauSource,
+} from "./plateau.mjs";
 import { landmarks } from "./landmarks.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 const canvas = document.querySelector("#city"),
@@ -67,6 +73,7 @@ const makeShape = (poly) => {
 };
 let updateTreeLOD,
   photoMaterials = [],
+  plateauMaterials = [],
   mangaRenderer,
   renderer,
   scene,
@@ -342,6 +349,9 @@ function applyMode(next) {
     w.material.color.set(night ? 0xf0c167 : 0x202026);
     w.material.opacity = night ? 0.5 : line ? 0.9 : tone ? 0.8 : 0.5;
   });
+  plateauMaterials.forEach((m) =>
+    m.color.set(mode === "night" ? 0x8f93ac : 0xffffff),
+  );
   referenceMaterials.forEach((m) => {
     m.color.set(mode === "night" ? 0x747993 : m.userData.dayColor);
     comicMaterial(m, false, false);
@@ -408,6 +418,13 @@ function view(name) {
   } else if (name === "north") {
     controls.target.set(-23, 18, -75);
     camera.position.set(aspect < 1 ? -92 : -85, 12, aspect < 1 ? 20 : -22);
+  } else if (name === "street") {
+    controls.target.set(-5, 15, -120);
+    camera.position.set(
+      aspect < 1 ? -310 : -210,
+      aspect < 1 ? 245 : 155,
+      aspect < 1 ? -420 : -320,
+    );
   } else if (name === "crossing") {
     controls.target.set(aspect < 1 ? -49 : -36, aspect < 1 ? 16 : 13, -8);
     camera.position.set(-85, aspect < 1 ? 10 : 8, -47);
@@ -577,7 +594,9 @@ async function start() {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.localClippingEnabled = true;
     mangaRenderer = new MangaRenderer(renderer);
-    mangaRenderer.normalMaterial.clippingPlanes = streetClipPlanes;
+    mangaRenderer.normalMaterial.clippingPlanes = streetClipPlanes.map(
+      (p) => new THREE.Plane(p.normal, 235),
+    );
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0xe8e6df, 1500, 2200);
     comicContours = new THREE.Group();
@@ -592,7 +611,7 @@ async function start() {
       units: "meters",
       axes: "Y up, X east, Z south",
       limitations:
-        "Estimated heights where absent; decorative windows; approximate road widths; photograph-based alley entrance and signage approximate; no surveyed indoor corridor or terrain elevation; halftone screen shader is not baked into GLB; decorative architectural details exported as geometry",
+        "PLATEAU 2020 photo-textured buildings where available; estimated heights and decorative windows elsewhere; approximate road widths; photograph-based alley entrance and signage approximate; no surveyed indoor corridor or terrain elevation; halftone screen shader is not baked into GLB; decorative architectural details exported as geometry",
       license:
         "OpenStreetMap ODbL; see https://www.openstreetmap.org/copyright",
     };
@@ -655,12 +674,20 @@ async function start() {
       limitations:
         "Procedural facades, signs and roof equipment are not surveyed real architecture",
     };
+    status.textContent = "写真付きの建物85棟を読み込み中…";
+    const plateau = await loadPlateau(
+      loader,
+      streetClipPlanes.map((p) => new THREE.Plane(p.normal, 235)),
+    );
+    plateauMaterials = plateau.materials;
+    let replacedTriangles = 0;
     imported.scene.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = true;
       o.receiveShadow = true;
       if (o.name === "buildings" || o.name === "buildingsDetail") {
         refineLandmarkMasses(o);
+        replacedTriangles += replaceProceduralMasses(o, plateau.features);
         computeBoundsTree.call(o.geometry);
         o.raycast = acceleratedRaycast;
         collisionMeshes.push(o);
@@ -727,6 +754,19 @@ async function start() {
     city.add(lowTrees.scene);
     updateTreeLOD = makeTreeLOD(imported.scene, lowTrees.scene);
     city.add(imported.scene);
+    city.add(plateau.group);
+    plateau.group.traverse((o) => {
+      if (!o.isMesh) return;
+      computeBoundsTree.call(o.geometry);
+      o.raycast = acceleratedRaycast;
+      collisionMeshes.push(o);
+    });
+    city.userData.plateau = plateauSource;
+    document.documentElement.dataset.plateauBuildings = String(
+      plateau.features.length,
+    );
+    document.documentElement.dataset.plateauReplacedTriangles =
+      String(replacedTriangles);
     addFrontage();
     photoMaterials = [
       ...(await addPhotoFacade(frontage)),
@@ -833,7 +873,7 @@ async function start() {
         render();
         const image = document.createElement("canvas");
         image.width = width;
-        image.height = height + 140;
+        image.height = height + 180;
         const ctx = image.getContext("2d");
         ctx.fillStyle = mode === "night" ? "#12121d" : "#faf8f3";
         ctx.fillRect(0, 0, width, image.height);
@@ -853,6 +893,12 @@ async function start() {
             " / 漫画翻案・一部省略 / tubasa-susukino.com/location/artwork-sources.md",
           24,
           height + 115,
+        );
+        ctx.fillText(
+          plateauCredit +
+            " / CC BY 4.0 / tubasa-susukino.com/location/plateau-sources.md",
+          24,
+          height + 150,
         );
         const blob = await new Promise((resolve) => image.toBlob(resolve));
         if (!blob) throw Error("PNG encoding failed");

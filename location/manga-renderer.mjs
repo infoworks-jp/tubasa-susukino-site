@@ -14,17 +14,26 @@ export class MangaRenderer {
     this.normalMaterial.defaultAttributeValues = { inkArtwork: [0] };
     this.normalMaterial.onBeforeCompile = (shader) => {
       shader.vertexShader =
-        "attribute float inkArtwork; varying float artworkMask;\n" +
+        "attribute float inkArtwork; varying float artworkMask; varying vec3 clipWorldPosition;\n" +
         shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
-        "#include <begin_vertex>\n artworkMask = inkArtwork;",
+        `#include <begin_vertex>
+        artworkMask = inkArtwork;
+        vec4 clipWorld = vec4(transformed,1.);
+        #ifdef USE_INSTANCING
+        clipWorld = instanceMatrix * clipWorld;
+        #endif
+        clipWorldPosition = (modelMatrix * clipWorld).xyz;`,
       );
       shader.fragmentShader =
-        "varying float artworkMask;\n" + shader.fragmentShader;
+        "varying float artworkMask; varying vec3 clipWorldPosition;\n" +
+        shader.fragmentShader;
       shader.fragmentShader = shader.fragmentShader.replace(
         /\n}\s*$/,
-        "\n gl_FragColor.a = artworkMask;\n}",
+        // The procedural source ends at 200m. Whole photographed buildings
+        // are retained to 235m, including their street-facing boundary walls.
+        "\n if(artworkMask<.05 && max(abs(clipWorldPosition.x),abs(clipWorldPosition.z))>200.) discard; gl_FragColor.a = artworkMask;\n}",
       );
     };
     this.material = new THREE.ShaderMaterial({
@@ -43,6 +52,7 @@ export class MangaRenderer {
       fragmentShader: `varying vec2 uv0;
       uniform sampler2D colorMap,normalMap,depthMap;
       uniform vec2 pixel;uniform float near,far,tone,pitch;
+      float luminanceAt(vec2 p){return pow(max(dot(texture2D(colorMap,p).rgb,vec3(.299,.587,.114)),0.),1./2.2);}
       float distanceAt(vec2 p){float z=texture2D(depthMap,p).r*2.-1.;return 2.*near*far/(far+near-z*(far-near));}
       void main(){
         vec3 base=texture2D(colorMap,uv0).rgb;
@@ -66,7 +76,26 @@ export class MangaRenderer {
           paper=mix(paper,vec3(.003),1.-smoothstep(.035,.16,l));
         }
         float artwork=texture2D(normalMap,uv0).a;
-        if(d<far*.99) paper=mix(paper,base,step(.5,artwork));
+        // 0 = procedural surfaces, 0.4 = surveyed photographic facade, 1 = authored ink.
+        // Trace the actual texture contrast (window frames, lettering, masonry).
+        // No repeated/random windows or invented signs are added to these walls.
+        if(artwork>.2 && artwork<.7){
+          float light=pow(max(l,0.),1./2.2);
+          float left=luminanceAt(uv0-vec2(pixel.x,0.)),right=luminanceAt(uv0+vec2(pixel.x,0.));
+          float top=luminanceAt(uv0+vec2(0.,pixel.y)),bottom=luminanceAt(uv0-vec2(0.,pixel.y));
+          float contrast=length(vec2(right-left,top-bottom));
+          float textureInk=smoothstep(.045,.18,contrast);
+          float solid=1.-smoothstep(.025,.09,light);
+          paper=vec3(1.);
+          if(tone>.5){
+            float density=clamp((.85-light)*.43,0.,.32);
+            vec2 q=fract(mat2(.866,-.5,.5,.866)*gl_FragCoord.xy/pitch)-.5;
+            float radius=sqrt(density/3.14159265),aa=max(fwidth(length(q)),.025);
+            paper=mix(vec3(1.),vec3(.006),1.-smoothstep(radius-aa,radius+aa,length(q)));
+          }
+          paper=mix(paper,vec3(.003),max(solid,textureInk*.9));
+        }
+        if(d<far*.99) paper=mix(paper,base,step(.75,artwork));
         gl_FragColor=vec4(mix(paper,vec3(.004),edge*(1.-artwork*.8)),1.);
         #include <colorspace_fragment>
       }`,

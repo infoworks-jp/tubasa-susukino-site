@@ -137,7 +137,19 @@ for (const viewport of [
         () => document.documentElement.dataset.collisionMeshes,
       ),
     ),
-    2,
+    6,
+  );
+  assert.equal(
+    await page.evaluate(() =>
+      Number(document.documentElement.dataset.plateauBuildings),
+    ),
+    85,
+  );
+  assert.ok(
+    (await page.evaluate(() =>
+      Number(document.documentElement.dataset.plateauReplacedTriangles),
+    )) > 1000,
+    "photographed buildings replace overlapping procedural walls",
   );
   assert.ok(
     Number(
@@ -185,7 +197,7 @@ for (const viewport of [
       );
     }
   }
-  for (const view of ["crossing", "north", "shop", "overview"]) {
+  for (const view of ["crossing", "north", "street", "shop", "overview"]) {
     await page.locator(`[data-view="${view}"]`).click();
     const state = await page.evaluate(() =>
       JSON.parse(document.documentElement.dataset.cameraState),
@@ -322,8 +334,8 @@ for (const viewport of [
         "export contains the photograph-aligned entrance sign",
       );
       assert.ok(
-        json.images?.length >= 3,
-        "export preserves the three licensed manga facade textures",
+        json.images?.length >= 5,
+        "export preserves three manga textures and two PLATEAU photo atlases",
       );
       for (const name of [
         "Nikka / corner facade",
@@ -341,6 +353,41 @@ for (const viewport of [
         "export retains all source photograph records",
       );
       assert.ok(artwork.artworkAttribution.includes("MIKI Yoshihito"));
+      const plateau = json.nodes.find(
+        (n) => n.extras?.buildingCount === 85,
+      )?.extras;
+      assert.equal(plateau?.year, 2020);
+      assert.equal(plateau?.buildings.length, 85);
+      assert.ok(plateau?.license.includes("CC BY 4.0"));
+      const plateauMeshes = json.nodes
+        .filter(
+          (n) => n.name?.startsWith("PLATEAU_") && Number.isInteger(n.mesh),
+        )
+        .map((n) => json.meshes[n.mesh]);
+      assert.equal(
+        plateauMeshes.length,
+        4,
+        "export retains all photographed wall and roof meshes",
+      );
+      assert.equal(
+        plateauMeshes.reduce(
+          (sum, m) =>
+            sum +
+            m.primitives.reduce(
+              (n, p) => n + json.accessors[p.attributes.POSITION].count,
+              0,
+            ),
+          0,
+        ),
+        40914,
+      );
+      assert.equal(
+        plateauMeshes.filter((m) =>
+          m.primitives.some((p) => p.attributes.TEXCOORD_0 !== undefined),
+        ).length,
+        2,
+        "both photo atlases retain UV mappings",
+      );
       const landmark = json.nodes.find((n) => n.extras?.landmarks)?.extras
         .landmarks;
       assert.deepEqual(landmark.shop.coordinates, [141.3544949, 43.055336]);
@@ -375,6 +422,27 @@ await page.unroute("**/location-data.geojson");
 await page.locator("#retry").click();
 await page.waitForFunction(
   () => document.documentElement.dataset.cityReady === "true",
+);
+await page.route("**/assets/plateau/data44.glb", (route) =>
+  route.fulfill({ status: 503, body: "unavailable" }),
+);
+await page.reload();
+await page.locator("#failure").waitFor({ state: "visible" });
+assert.equal(
+  await page.locator("#glb").isEnabled(),
+  false,
+  "missing photographed geometry must fail closed",
+);
+await page.unroute("**/assets/plateau/data44.glb");
+await page.locator("#retry").click();
+await page.waitForFunction(
+  () => document.documentElement.dataset.cityReady === "true",
+);
+assert.equal(
+  await page.evaluate(() =>
+    Number(document.documentElement.dataset.plateauBuildings),
+  ),
+  85,
 );
 await page.evaluate(() =>
   document
