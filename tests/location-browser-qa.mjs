@@ -354,20 +354,14 @@ for (const viewport of [
   await page.locator('[data-view="entrance"]').click();
   for (const m of ["line", "tone"]) {
     await page.locator('[data-mode="' + m + '"]').click();
-    // Element screenshots include overlapping DOM controls (the existing red
-    // caption stripe). Read the rendered canvas pixels to test the 3D mask only.
-    const rawCanvas = Buffer.from(
-      (
-        await page
-          .locator("#city")
-          .evaluate((canvas) => canvas.toDataURL("image/png"))
-      ).split(",")[1],
-      "base64",
-    );
-    await fs.writeFile(
-      `location-qa/${viewport.width}-${m}-spot-colour.png`,
-      rawCanvas,
-    );
+    // Capture the composited WebGL image. toDataURL after presentation can
+    // read a cleared drawing buffer (SwiftShader), even when the visible scene
+    // is correct. Hide only the DOM overlays for this 3D colour-mask assertion;
+    // the complete controls/captions are exercised and captured above.
+    const rawCanvas = await page.locator("#city").screenshot({
+      path: `location-qa/${viewport.width}-${m}-spot-colour.png`,
+      style: ".stage > :not(#city) { visibility: hidden !important; }",
+    });
     const accent = PNG.sync.read(rawCanvas);
     let green = 0,
       red = 0;
