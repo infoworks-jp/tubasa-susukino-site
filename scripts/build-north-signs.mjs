@@ -1,0 +1,22 @@
+// Independently drawn replacement for the changed advertisement below Asahi.
+// Reference: user's two August 2025 street views, supplied 2026-10-15.
+// No reference-photo pixels, logo tracing, or generated shop names are used.
+import fs from 'node:fs/promises';
+const text=(s,x,y,size,extra='')=>`<text x="${x}" y="${y}" font-size="${size}" ${extra}>${s}</text>`;
+const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1000" viewBox="0 0 2000 1000"><title>Asahi building lower advertisement, August 2025 reference; independent illustration</title>
+<defs><linearGradient id="wall" x2="0" y2="1"><stop stop-color="#e6e5df"/><stop offset="1" stop-color="#d7d6cf"/></linearGradient><linearGradient id="metal"><stop stop-color="#6c7374"/><stop offset=".2" stop-color="#cbd0cd"/><stop offset=".7" stop-color="#828a88"/><stop offset="1" stop-color="#394144"/></linearGradient><linearGradient id="glass"><stop stop-color="#263631"/><stop offset=".52" stop-color="#50605a"/><stop offset=".55" stop-color="#303d38"/><stop offset="1" stop-color="#152824"/></linearGradient></defs>
+<rect width="2000" height="1000" fill="url(#wall)"/>
+<g stroke="#adafa8" stroke-width="3"><path d="M0 55H2000M0 350H2000M0 960H2000M440 0V350M975 0V350M1520 0V350M440 960V1000M975 960V1000M1520 960V1000" fill="none"/></g>
+<!-- The formerly red Aiful advertising rectangle is blank in the supplied 2025 views. -->
+<rect x="30" y="96" width="1400" height="217" fill="#888d89" stroke="#6a726e" stroke-width="12"/><rect x="43" y="107" width="1374" height="193" fill="#d4d4ce"/>
+<g stroke="#777f77" stroke-width="18"><rect x="1532" y="110" width="238" height="197" fill="url(#glass)"/><rect x="1852" y="110" width="140" height="197" fill="url(#glass)"/></g>
+<!-- Main Hot House panel: the close reference shows its white/red display. -->
+<rect x="5" y="403" width="1988" height="552" fill="#303b40"/>
+<rect x="14" y="411" width="1970" height="530" fill="url(#metal)" stroke="#89938f" stroke-width="7"/>
+<rect x="37" y="435" width="1924" height="482" fill="#e8ece9" stroke="#354851" stroke-width="9"/>
+<rect x="99" y="477" width="1800" height="394" fill="#eeefea" stroke="#c2443a" stroke-width="12"/>
+<g font-family="Hiragino Kaku Gothic ProN, Noto Sans CJK JP, sans-serif" font-weight="900" fill="#bc3e33">${text('ほっとハウス',1000,773,268,'text-anchor="middle" textLength="1650" lengthAdjust="spacingAndGlyphs"')}</g>
+<g fill="#69736e"><circle cx="40" cy="425" r="6"/><circle cx="1960" cy="425" r="6"/><circle cx="40" cy="927" r="6"/><circle cx="1960" cy="927" r="6"/></g>
+</svg>`;
+const path=new URL('../location/assets/manga/asahi-lower-sign-2025.svg',import.meta.url);
+if(process.argv.includes('--check')){if(await fs.readFile(path,'utf8')!==svg)throw Error('North sign SVG is stale');}else await fs.writeFile(path,svg);

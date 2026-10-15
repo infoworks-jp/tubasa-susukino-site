@@ -42,6 +42,14 @@ export const baseAtlas = {
   date: "2022-12-18 (publication)",
   license: "Unsplash License",
 };
+export const northSignAtlas = {
+  file: "./assets/manga/asahi-lower-sign-2025.webp",
+  originalSize: [2000, 1000], crop: [0, 0, 2000, 1000], measurementSize: [2000, 1000],
+  source: "Independent illustration from user-provided August 2025 sign reference; see artwork-sources.md",
+  author: "Tsubasa site production", date: "2025-08 reference / illustrated 2026-10-15",
+  license: "Original illustration; depicted trademarks belong to their respective owners",
+  illustration: true,
+};
 // Coordinates were measured on the 2048 × 1152 source preview. No sign text is
 // regenerated. Footprint endpoints are local map metres (east, south).
 export const surveyedPanels = [
@@ -428,6 +436,23 @@ export const surveyedPanels = [
     height: 3.1,
   },
 ];
+
+// This single continuous sign face covers the outdated Aiful/Hot House patches
+// across the 2024 and clock-obscured 2022 photographs, without replacing the
+// building's windows, shops, or the large Asahi can above it.
+const asahiEdge = [[-65.6, -66.9], [-55.1, -60.8]];
+const alongAsahi = u => asahiEdge[0].map((v, i) => v + (asahiEdge[1][i] - v) * u);
+surveyedPanels.push({
+  name: "Asahi base / updated Hot House sign and blank upper panel (2025)",
+  atlas: northSignAtlas,
+  q: [[0, 0], [2000, 0], [2000, 1000], [0, 1000]],
+  a: alongAsahi(0.055), b: alongAsahi(0.945),
+  bottom: 5.45, height: 4.73, offset: 0.39, depth: 0.04,
+  reference: { date: "2025-08", supplied: "2026-10-15", measurementSize: [2048, 1104],
+    wholeBaseQuad: [[593, 483], [782, 493], [789, 724], [598, 706]],
+    upperBlankBounds: [602, 510, 747, 547], signBounds: [608, 551, 778, 601],
+    note: "Far view identifies the single billboard; close view supplies the white/red display. Dimensions approximate." },
+});
 
 export function atlasUV(point, atlas = photoAtlas) {
   const scale = atlas.originalSize[0] / atlas.measurementSize[0];

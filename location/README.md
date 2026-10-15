@@ -126,3 +126,7 @@ node scripts/build-arrival-model.mjs --portrait
 ```
 `tests/facade-projection-qa.mjs` が両モデルのバイト単位の再現性とgzip圧縮時の初期転送予算を検証する。
 元GLB、PLATEAUの形状、建物置換処理、初期カメラを変えた場合は両方を再生成する。
+
+
+### 北側の広告修正（2026-10-15）
+Asahi下の古い金融広告と分割された看板を、2025年8月の提供参考画面で確認した無地の上段パネル・ほっとハウスの独自イラスト1面に更新。大型Asahi、SAMTY、北星ビルの看板と窓は従前の写真を保持。`node scripts/build-north-signs.mjs` でSVG、`scripts/render-north-signs.mjs` で配信用WebPを生成。日本語フォントのある環境で生成し、生成済みWebPを公開する。参考画面の画像は配信しない。追加約42KBは北側の後段取得のみで、先行表示モデルは変更なし。

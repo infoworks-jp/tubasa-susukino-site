@@ -6,6 +6,7 @@ import {
   atlasUV,
   photoAtlas,
   baseAtlas,
+  northSignAtlas,
   surveyedPanels,
 } from "../location/facade-projection.mjs";
 import {
@@ -62,7 +63,7 @@ const trapezoid = [
   [1, 2],
 ];
 assert.deepEqual(projectQuad(trapezoid, 0.5, 0.5), [2, 4 / 3]);
-for (const atlas of [photoAtlas, baseAtlas, ...routeAtlases]) {
+for (const atlas of [photoAtlas, baseAtlas, northSignAtlas, ...routeAtlases]) {
   const data = await fs.readFile(
     new URL("../location/" + atlas.file.slice(2), import.meta.url),
   );
@@ -382,3 +383,19 @@ for (let y = 0; y < 24; y++)
 console.log(
   "PASS: 576 rays verify a continuous wall and correctly cut sign silhouettes",
 );
+
+// The new sign must sit outside every old photo patch and remain registered to
+// the same Asahi facade edge, so the old lender ad cannot bleed through it.
+execFileSync(process.execPath, ['scripts/build-north-signs.mjs', '--check']);
+const northSign = surveyedPanels.find(p => p.atlas === northSignAtlas);
+assert.ok(northSign && northSign.offset > 0.34);
+for (const [i, u] of [0.055, 0.945].entries()) {
+  const expected = [-65.6 + 10.5 * u, -66.9 + 6.1 * u];
+  (i ? northSign.b : northSign.a).forEach((n,j) => assert.ok(Math.abs(n-expected[j]) < 1e-8));
+}
+const northSVG = await fs.readFile(new URL('../location/assets/manga/asahi-lower-sign-2025.svg', import.meta.url), 'utf8');
+assert.ok(northSVG.includes('ほっとハウス'));
+assert.ok(!northSVG.includes('アイフル'));
+assert.ok(!/<image\b|https:\/\/.*(?:google|gstatic)/i.test(northSVG));
+assert.ok((await fs.stat(new URL('../location/assets/manga/asahi-lower-sign-2025.webp', import.meta.url))).size < 150000);
+console.log('PASS: updated northern advertisement, continuous registration, no embedded reference imagery, small deferred atlas');

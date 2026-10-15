@@ -178,7 +178,7 @@ for (const viewport of [
     await page.evaluate(() =>
       Number(document.documentElement.dataset.surveyedPanels),
     ),
-    28,
+    29,
   );
   assert.equal(
     await page.evaluate(() =>
@@ -512,6 +512,7 @@ for (const viewport of [
       for (const name of [
         "Nikka / corner facade",
         "Asahi / billboard",
+        "Asahi base / updated Hot House sign and blank upper panel (2025)",
         "SAMTY / west roof sign",
         "West street / karaoke vertical sign",
         "Brown brick / south facade",
@@ -524,7 +525,7 @@ for (const viewport of [
       const artwork = json.nodes.find((n) => n.extras?.artworkSources)?.extras;
       assert.equal(
         artwork?.artworkSources.length,
-        8,
+        9,
         "export retains all photograph and illustration source records",
       );
       assert.ok(artwork.artworkAttribution.includes("MIKI Yoshihito"));
@@ -532,11 +533,11 @@ for (const viewport of [
       const photographed = json.nodes.find(
         (n) => n.name === "Susukino / photographed street detail",
       );
-      assert.equal(photographed.extras.panelCount, 28);
-      assert.equal(photographed.extras.sources.length, 2);
+      assert.equal(photographed.extras.panelCount, 29);
+      assert.equal(photographed.extras.sources.length, 3);
       assert.equal(
         json.nodes.filter((n) => n.extras?.measuredPhotoCorners).length,
-        51,
+        52,
       );
       const route = json.nodes.find(
         (n) => n.name === "Susukino / Route 36 to Yokocho",
@@ -553,8 +554,8 @@ for (const viewport of [
       const updatedSigns = json.nodes.filter((n) => n.extras?.illustration);
       assert.equal(
         updatedSigns.length,
-        9,
-        "No.2 and No.3 export all updated sign surfaces",
+        10,
+        "No.2, No.3 and Asahi base export all updated sign surfaces",
       );
       assert.ok(
         updatedSigns.every(

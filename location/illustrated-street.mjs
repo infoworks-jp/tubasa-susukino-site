@@ -2,8 +2,9 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { loadArtwork, artworkPlane, outlinedBox } from "./artwork.mjs";
 import { routeBuildings, routeAtlases } from "./route-facades.mjs";
+import { northSignAtlas } from "./facade-projection.mjs";
 export const artworkCredits =
-  "写真: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0), jegal gihwan (Unsplash), 禁樹なずな (CC BY-SA 4.0), 提供写真 / グリーンビル広告: 2025年資料から独自作画";
+  "写真: x768 (CC BY-SA 2.0), ノボホショコロトソ (CC BY 4.0), MIKI Yoshihito (CC BY 2.0), jegal gihwan (Unsplash), 禁樹なずな (CC BY-SA 4.0), 提供写真 / グリーンビル・北側広告: 2025年資料から独自作画";
 export const artworkSources = [
   {
     author: "x768",
@@ -31,7 +32,7 @@ export const artworkSources = [
   },
 ];
 artworkSources.push(
-  ...routeAtlases.map((a) => ({
+  ...[...routeAtlases, northSignAtlas].map((a) => ({
     author: a.author,
     date: a.date,
     url: a.source,

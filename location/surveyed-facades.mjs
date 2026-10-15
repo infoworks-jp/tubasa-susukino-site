@@ -6,13 +6,14 @@ import {
   atlasUV,
   photoAtlas,
   baseAtlas,
+  northSignAtlas,
   surveyedPanels,
 } from "./facade-projection.mjs";
 
 export async function addSurveyedFacades(
   city,
   panels = surveyedPanels,
-  atlases = [photoAtlas, baseAtlas],
+  atlases = [photoAtlas, baseAtlas, northSignAtlas],
   groupName = "Susukino / photographed street detail",
 ) {
   const textures = new Map(
