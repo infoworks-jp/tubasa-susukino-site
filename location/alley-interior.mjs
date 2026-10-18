@@ -173,6 +173,13 @@ export function addAlleyInterior(scene) {
   const mat=photo('Tsubasa blue entrance mat','tsubasa-mat',1.85,.77,[-2.05,-1.321,14.74],0);mat.rotation.x=-Math.PI/2;
   const redMat=photo('Karai14 red mat','karai-mat',.61,1.02,[-1.43,-1.319,13.62],0);redMat.rotation.x=-Math.PI/2;
   const cover=photo('Square floor access cover','floor-cover',.35,.35,[-2.0,-1.318,12.0],0);cover.rotation.x=-Math.PI/2;
+  // Floor faces have no front-wall Y rotation. Undo its U compensation and
+  // send the photographed top edge toward the far end of the passage.
+  for(const floorSurface of [mat,redMat,cover]) {
+    const uv=floorSurface.geometry.attributes.uv;
+    for(let i=0;i<uv.count;i++){uv.setX(i,1-uv.getX(i));uv.setY(i,1-uv.getY(i));}
+    uv.needsUpdate=true;
+  }
   let texturePromise,ready=false;
   async function loadTextures() {
     if(ready)return;
