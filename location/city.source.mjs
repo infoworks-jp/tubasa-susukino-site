@@ -31,6 +31,7 @@ import {
 import { addSurveyedFacades } from "./surveyed-facades.mjs";
 import { addRouteArchitecture } from "./route-architecture.mjs";
 import { landmarks } from "./landmarks.mjs";
+import { addAlleyInterior, alleyStops, alleySource } from "./alley-interior.mjs";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 performance.mark("city-load-start");
 let detailState = "loading";
@@ -120,6 +121,8 @@ const collisionMeshes = [],
   fatEdges = [],
   frontMaterials = [],
   referenceMaterials = [];
+let alleyInterior;
+const inAlley = () => Object.hasOwn(alleyStops, activeView);
 let shopLabel,
   guideLeader,
   guideMarker,
@@ -187,6 +190,7 @@ function inRing(x, z, ring) {
   return inside;
 }
 function cameraFloor(x, z) {
+  if (inAlley()) return -1.2;
   if (floorCache.x === x && floorCache.z === z) return floorCache.value;
   let floor = 4;
   if (collisionMeshes.length) {
@@ -207,6 +211,25 @@ function cameraFloor(x, z) {
 function constrainCamera() {
   if (constraining) return;
   constraining = true;
+  if (inAlley()) {
+    const local = alleyInterior.group.worldToLocal(camera.position.clone());
+    local.y = Math.max(local.y, -1.18);
+    if (activeView !== "alley") {
+      local.x = THREE.MathUtils.clamp(local.x, activeView === "alley-stairs" ? -1.5 : -2.86, activeView === "alley-stairs" ? 1.5 : .9);
+      local.z = THREE.MathUtils.clamp(local.z, -5, 15.05);
+      if (["alley-passage", "alley-door"].includes(activeView)) {
+        local.x = THREE.MathUtils.clamp(local.x, -2.86, -1.24);
+        local.z = THREE.MathUtils.clamp(local.z, 4.65, 15.05);
+      } else if (activeView === "alley-stairs") {
+        const floor = local.z < 0 ? 0 : -Math.min(1.35, (Math.floor(local.z / .43) + 1) * 1.35 / 7);
+        local.y = Math.max(local.y, floor + .15);
+      } else local.z = Math.min(local.z, 4.15);
+    }
+    camera.position.copy(alleyInterior.world(local.toArray()));
+    camera.lookAt(controls.target);
+    constraining = false;
+    return;
+  }
   const t = controls.target;
   const old = t.clone();
   t.x = THREE.MathUtils.clamp(t.x, -180, 180);
@@ -223,7 +246,7 @@ function constrainCamera() {
 function render() {
   if (!renderer) return;
   constrainCamera();
-  if (!exporting && updateTreeLOD?.(camera))
+  if (!exporting && !inAlley() && updateTreeLOD?.(camera))
     renderer.shadowMap.needsUpdate = true;
   camera.updateMatrixWorld();
   if (shopLabel) {
@@ -271,6 +294,8 @@ function render() {
       (e.material.linewidth = (mode === "tone" ? 1.5 : 1.25) * outputScale),
   );
   document.documentElement.dataset.cameraState = JSON.stringify({
+    view: activeView,
+    interior: inAlley(),
     position: camera.position.toArray(),
     target: controls.target.toArray(),
     floor: cameraFloor(camera.position.x, camera.position.z),
@@ -279,6 +304,20 @@ function render() {
     guideAnchor: guidePoint.toArray(),
     guideScreen: guidePoint.clone().project(camera).toArray(),
   });
+  if (inAlley()) {
+    const doorway = alleyInterior.world([-2.05, -.05, 15.15]);
+    document.documentElement.dataset.alleyState = JSON.stringify({
+      view: activeView,
+      localCamera: alleyInterior.group.worldToLocal(camera.position.clone()).toArray(),
+      doorway: doorway.project(camera).toArray(),
+      streetVisible: city.visible,
+      interiorVisible: alleyInterior.group.visible,
+      westWallVisible: alleyInterior.walls.visible,
+      geometry: alleyInterior.group.children.length,
+      menuScreen: alleyInterior.group.getObjectByName("Tsubasa menu board").getWorldPosition(new THREE.Vector3()).project(camera).toArray(),
+      shopRowScreen: alleyInterior.group.getObjectByName("Akarenga noren").getWorldPosition(new THREE.Vector3()).project(camera).toArray(),
+    });
+  }
   if (mode === "tone" || mode === "line")
     mangaRenderer.render(scene, camera, mode, [comicContours]);
   else renderer.render(scene, camera);
@@ -346,7 +385,7 @@ function describeMode() {
     { color: "カラー", line: "線画", tone: "線画＋トーン", night: "夜景" }[
       mode
     ] +
-    (activeView === "entrance"
+    (inAlley() ? " · " + alleyStops[activeView].title : activeView === "entrance"
       ? " · 横丁入口（つばさは通路の奥）"
       : " · すすきの / つばさ周辺") +
     (detailState === "loading" ? " · 周辺の街並みを読み込み中（操作できます）"
@@ -386,7 +425,7 @@ function applyMode(next) {
     e.material.color.set(night ? 0x555d85 : 0x28272b);
     e.material.opacity = line || tone ? 0.95 : 0.5;
   });
-  comicContours.visible = line || tone;
+  comicContours.visible = !inAlley() && (line || tone);
   glass.forEach((w) => {
     w.material.color.set(night ? 0xf0c167 : 0x202026);
     w.material.opacity = night ? 0.5 : line ? 0.9 : tone ? 0.8 : 0.5;
@@ -437,9 +476,24 @@ function applyMode(next) {
 function view(name) {
   activeView = name;
   const aspect = canvas.clientWidth / canvas.clientHeight;
+  const inside = inAlley();
+  city.visible = !inside;
+  alleyInterior.group.visible = inside;
+  comicContours.visible = !inside && (mode === "line" || mode === "tone");
+  controls.minDistance = inside ? .8 : 8;
+  controls.maxDistance = inside ? (name === "alley" ? 65 : 15) : 1400;
+  controls.maxPolarAngle = inside ? Math.PI * .49 : Math.PI * .53;
+  camera.near = inside ? .05 : .2;
+  document.documentElement.dataset.alleyView = inside ? name : "outside";
   camera.fov = name === "route" ? (aspect >= 1 ? 56 : 48) : 42;
   camera.updateProjectionMatrix();
-  if (name === "overview") {
+  if (inside) {
+    const stop = alleyInterior.setView(name, aspect);
+    camera.fov = stop.fov;
+    camera.updateProjectionMatrix();
+    camera.position.copy(stop.position);
+    controls.target.copy(stop.target);
+  } else if (name === "overview") {
     controls.target.set(-15, 12, 10);
     const direction = new THREE.Vector3(1, 1.2, 1.15).normalize();
     const corners = [];
@@ -553,7 +607,7 @@ function view(name) {
     shop: ["つばさへの入口", "緑の看板から半地下へ。店は通路の一番奥 / B1F"],
     entrance: ["新ラーメン横丁 入口", "つばさは通路の一番奥 / B1F"],
   };
-  const caption = captions[name] || [
+  const caption = (inside ? [alleyStops[name].title, alleyStops[name].text] : captions[name]) || [
     "味一番つばさ",
     "新ラーメン横丁の一番奥 / B1F",
   ];
@@ -564,6 +618,12 @@ function view(name) {
     .forEach((b) =>
       b.setAttribute("aria-pressed", String(b.dataset.view === name)),
     );
+  const steps = Object.keys(alleyStops), current = steps.indexOf(name);
+  document.querySelector(".alley-stepper").hidden = !inside;
+  document.querySelector("#alley-current").textContent = inside ? alleyStops[name].text : "";
+  document.querySelector("#alley-prev").disabled = current <= 0;
+  document.querySelector("#alley-next").disabled = current === steps.length - 1;
+  renderer.shadowMap.needsUpdate = true;
   describeMode();
   render();
 }
@@ -706,6 +766,8 @@ async function start() {
         "OpenStreetMap ODbL; see https://www.openstreetmap.org/copyright",
     };
     scene.add(city);
+    alleyInterior = addAlleyInterior(scene);
+    document.documentElement.dataset.alleySource = JSON.stringify(alleySource);
     camera = new THREE.PerspectiveCamera(42, 1, 0.2, 2000);
     controls = new OrbitControls(camera, canvas);
     controls.enableDamping = false;
@@ -941,7 +1003,16 @@ async function start() {
       );
     document
       .querySelectorAll("[data-view]")
-      .forEach((b) => b.addEventListener("click", () => view(b.dataset.view)));
+      .forEach((b) => b.addEventListener("click", () => {
+        view(b.dataset.view);
+        if (inAlley()) canvas.scrollIntoView({block: "center", behavior: "instant"});
+      }));
+    for (const [id, direction] of [["alley-prev", -1], ["alley-next", 1]])
+      document.querySelector("#" + id).addEventListener("click", () => {
+        const stops = Object.keys(alleyStops), index = stops.indexOf(activeView) + direction;
+        if (stops[index]) view(stops[index]);
+      });
+    document.querySelector("#alley-exit").addEventListener("click", () => view("entrance"));
     canvas.addEventListener("keydown", (e) => {
       if (
         ![
@@ -963,8 +1034,8 @@ async function start() {
       if (e.key === "ArrowUp") s.phi = Math.max(0.1, s.phi - 0.1);
       if (e.key === "ArrowDown") s.phi = Math.min(Math.PI * 0.53, s.phi + 0.1);
       if (e.key === "+" || e.key === "=")
-        s.radius = Math.max(8, s.radius * 0.9);
-      if (e.key === "-") s.radius = Math.min(1400, s.radius * 1.1);
+        s.radius = Math.max(controls.minDistance, s.radius * 0.9);
+      if (e.key === "-") s.radius = Math.min(controls.maxDistance, s.radius * 1.1);
       camera.position
         .copy(controls.target)
         .add(new THREE.Vector3().setFromSpherical(s));
@@ -976,8 +1047,8 @@ async function start() {
         offset.setLength(
           THREE.MathUtils.clamp(
             offset.length() * Number(b.dataset.zoom),
-            8,
-            1400,
+            controls.minDistance,
+            controls.maxDistance,
           ),
         );
         camera.position.copy(controls.target).add(offset);
@@ -989,10 +1060,11 @@ async function start() {
       const b = document.querySelector("#png");
       b.disabled = true;
       exporting = true;
+      const renderSize = renderer.getSize(new THREE.Vector2());
       const original = {
         ratio: renderer.getPixelRatio(),
-        width: canvas.clientWidth,
-        height: canvas.clientHeight,
+        width: renderSize.x,
+        height: renderSize.y,
       };
       try {
         const width = 2400,
@@ -1011,7 +1083,7 @@ async function start() {
         ctx.fillStyle = mode === "night" ? "#fff" : "#222";
         ctx.font = "28px sans-serif";
         ctx.fillText(
-          "味一番つばさ / すすきの — 概略3D街区（窓・入口寸法は概略）",
+          inAlley() ? "味一番つばさ / 新ラーメン横丁 — 提供写真に基づく3D案内（屋内寸法は概略）" : "味一番つばさ / すすきの — 概略3D街区（窓・入口寸法は概略）",
           24,
           height + 40,
         );
@@ -1056,7 +1128,7 @@ async function start() {
       exporting = true;
       updateTreeLOD?.fullDetail();
       try {
-        const result = await new GLTFExporter().parseAsync(city, {
+        const result = await new GLTFExporter().parseAsync(inAlley() ? alleyInterior.group : city, {
           binary: true,
           onlyVisible: true,
         });

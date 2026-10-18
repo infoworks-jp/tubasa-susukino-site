@@ -3,7 +3,7 @@ on:
   workflow_call:
   pull_request:
     branches: [main]
-    paths: ['location/**', 'location-data.geojson', 'tests/location-browser-qa.mjs', 'tests/plateau-data-qa.mjs', 'tests/facade-projection-qa.mjs', 'scripts/build-plateau.mjs', 'scripts/pack-plateau-textures.py', '.github/workflows/location-qa.yml']
+    paths: ['location/**', 'location-data.geojson', 'tests/location-browser-qa.mjs', 'tests/alley-browser-qa.mjs', 'tests/plateau-data-qa.mjs', 'tests/facade-projection-qa.mjs', 'scripts/build-plateau.mjs', 'scripts/pack-plateau-textures.py', '.github/workflows/location-qa.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,6 +32,7 @@ jobs:
         run: |
           python3 -m http.server 8080 --bind 127.0.0.1 > /tmp/location-server.log 2>&1 &
           node tests/location-browser-qa.mjs
+          node tests/alley-browser-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
