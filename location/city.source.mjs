@@ -767,6 +767,7 @@ async function start() {
     };
     scene.add(city);
     alleyInterior = addAlleyInterior(scene);
+    photoMaterials.push(...alleyInterior.photoMaterials);
     document.documentElement.dataset.alleySource = JSON.stringify(alleySource);
     camera = new THREE.PerspectiveCamera(42, 1, 0.2, 2000);
     controls = new OrbitControls(camera, canvas);
@@ -1001,18 +1002,37 @@ async function start() {
       .forEach((b) =>
         b.addEventListener("click", () => applyMode(b.dataset.mode)),
       );
+    let viewRequest = 0;
+    async function selectView(name) {
+      const request = ++viewRequest;
+      if (Object.hasOwn(alleyStops, name) && !alleyInterior.ready) {
+        document.documentElement.dataset.alleyTextures = "loading";
+        status.textContent = "写真から復元した横丁を読み込んでいます…";
+        try {
+          await alleyInterior.loadTextures();
+          document.documentElement.dataset.alleyTextures = "ready";
+        } catch (error) {
+          document.documentElement.dataset.alleyTextures = "error";
+          if (request === viewRequest) status.textContent = "横丁の写真を読み込めませんでした。もう一度、屋内のボタンを押してください。";
+          console.error(error);
+          return;
+        }
+      }
+      if (request !== viewRequest) return;
+      view(name);
+      if (inAlley()) canvas.scrollIntoView({block: "center", behavior: "instant"});
+    }
     document
       .querySelectorAll("[data-view]")
       .forEach((b) => b.addEventListener("click", () => {
-        view(b.dataset.view);
-        if (inAlley()) canvas.scrollIntoView({block: "center", behavior: "instant"});
+        selectView(b.dataset.view);
       }));
     for (const [id, direction] of [["alley-prev", -1], ["alley-next", 1]])
       document.querySelector("#" + id).addEventListener("click", () => {
         const stops = Object.keys(alleyStops), index = stops.indexOf(activeView) + direction;
-        if (stops[index]) view(stops[index]);
+        if (stops[index]) selectView(stops[index]);
       });
-    document.querySelector("#alley-exit").addEventListener("click", () => view("entrance"));
+    document.querySelector("#alley-exit").addEventListener("click", () => selectView("entrance"));
     canvas.addEventListener("keydown", (e) => {
       if (
         ![

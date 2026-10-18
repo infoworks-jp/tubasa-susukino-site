@@ -1,0 +1,782 @@
+{
+  "source": "16 user photographs supplied 2026-10-18; capture date unknown",
+  "surfaces": [
+    {
+      "name": "entry-sign",
+      "file": "entry-sign.webp",
+      "sourceId": "7CB15CB3-E93E-4265-B0F0-94171CEA86C6",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          294,
+          375
+        ],
+        [
+          969,
+          78
+        ],
+        [
+          953,
+          794
+        ],
+        [
+          277,
+          851
+        ]
+      ],
+      "size": [
+        1024,
+        768
+      ],
+      "bytes": 132746,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "building-name",
+      "file": "building-name.webp",
+      "sourceId": "7CB15CB3-E93E-4265-B0F0-94171CEA86C6",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          276,
+          853
+        ],
+        [
+          950,
+          798
+        ],
+        [
+          948,
+          888
+        ],
+        [
+          274,
+          919
+        ]
+      ],
+      "size": [
+        1024,
+        150
+      ],
+      "bytes": 17754,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "mogura-front",
+      "file": "mogura-front.webp",
+      "sourceId": "96FEE205-2B72-4CB0-B4DF-D1076CDA7636",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          276,
+          764
+        ],
+        [
+          831,
+          758
+        ],
+        [
+          805,
+          1320
+        ],
+        [
+          272,
+          1320
+        ]
+      ],
+      "size": [
+        1024,
+        1024
+      ],
+      "bytes": 186462,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "mogura-noren",
+      "file": "mogura-noren.webp",
+      "sourceId": "96FEE205-2B72-4CB0-B4DF-D1076CDA7636",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          337,
+          787
+        ],
+        [
+          817,
+          777
+        ],
+        [
+          811,
+          905
+        ],
+        [
+          324,
+          901
+        ]
+      ],
+      "size": [
+        1280,
+        340
+      ],
+      "bytes": 50554,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "mogura-bevel-menu",
+      "file": "mogura-bevel-menu.webp",
+      "sourceId": "96FEE205-2B72-4CB0-B4DF-D1076CDA7636",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          79,
+          766
+        ],
+        [
+          269,
+          771
+        ],
+        [
+          270,
+          1240
+        ],
+        [
+          88,
+          1178
+        ]
+      ],
+      "size": [
+        512,
+        1280
+      ],
+      "bytes": 118940,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "mogura-yellow",
+      "file": "mogura-yellow.webp",
+      "sourceId": "EE12EC31-3783-4F98-993C-43950E97AE1B",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          649,
+          459
+        ],
+        [
+          774,
+          469
+        ],
+        [
+          757,
+          1183
+        ],
+        [
+          621,
+          1161
+        ]
+      ],
+      "size": [
+        300,
+        1400
+      ],
+      "bytes": 49426,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "yokocho-header",
+      "file": "yokocho-header.webp",
+      "sourceId": "96FEE205-2B72-4CB0-B4DF-D1076CDA7636",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          0,
+          151
+        ],
+        [
+          1151,
+          193
+        ],
+        [
+          1151,
+          550
+        ],
+        [
+          0,
+          526
+        ]
+      ],
+      "size": [
+        1600,
+        470
+      ],
+      "bytes": 141694,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "fuji-poster",
+      "file": "fuji-poster.webp",
+      "sourceId": "784FC8FD-33A2-4192-851C-8601088A6029",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          239,
+          618
+        ],
+        [
+          409,
+          586
+        ],
+        [
+          413,
+          968
+        ],
+        [
+          242,
+          1007
+        ]
+      ],
+      "size": [
+        400,
+        960
+      ],
+      "bytes": 66652,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "akarenga-blade",
+      "file": "akarenga-blade.webp",
+      "sourceId": "7550F3C9-DD7F-4687-A10E-E885699A0A24",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          438,
+          564
+        ],
+        [
+          560,
+          569
+        ],
+        [
+          542,
+          1083
+        ],
+        [
+          422,
+          1059
+        ]
+      ],
+      "size": [
+        360,
+        1400
+      ],
+      "bytes": 80992,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "akarenga-wall-menu",
+      "file": "akarenga-wall-menu.webp",
+      "sourceId": "7550F3C9-DD7F-4687-A10E-E885699A0A24",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          565,
+          626
+        ],
+        [
+          1031,
+          546
+        ],
+        [
+          1017,
+          1168
+        ],
+        [
+          556,
+          1106
+        ]
+      ],
+      "size": [
+        1280,
+        1000
+      ],
+      "bytes": 204850,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "karai-noren",
+      "file": "karai-noren.webp",
+      "sourceId": "4F97B9C7-935E-465A-AAE0-68C187271616",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          1,
+          366
+        ],
+        [
+          878,
+          284
+        ],
+        [
+          864,
+          681
+        ],
+        [
+          1,
+          699
+        ]
+      ],
+      "size": [
+        1536,
+        540
+      ],
+      "bytes": 85928,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "karai-poster",
+      "file": "karai-poster.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          940,
+          818
+        ],
+        [
+          1036,
+          778
+        ],
+        [
+          1025,
+          1286
+        ],
+        [
+          904,
+          1244
+        ]
+      ],
+      "size": [
+        360,
+        1280
+      ],
+      "bytes": 93934,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "karai-standing",
+      "file": "karai-standing.webp",
+      "sourceId": "DE580058-938D-494A-A490-7DC1447D2E29",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          555,
+          1100
+        ],
+        [
+          1150,
+          1170
+        ],
+        [
+          1150,
+          2045
+        ],
+        [
+          608,
+          1960
+        ]
+      ],
+      "size": [
+        720,
+        1100
+      ],
+      "bytes": 205220,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "tsubasa-facade",
+      "file": "tsubasa-facade.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          192,
+          485
+        ],
+        [
+          885,
+          488
+        ],
+        [
+          828,
+          1290
+        ],
+        [
+          214,
+          1290
+        ]
+      ],
+      "size": [
+        1200,
+        1400
+      ],
+      "bytes": 309382,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "tsubasa-noren",
+      "file": "tsubasa-noren.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          230,
+          678
+        ],
+        [
+          863,
+          697
+        ],
+        [
+          846,
+          941
+        ],
+        [
+          232,
+          945
+        ]
+      ],
+      "size": [
+        1536,
+        650
+      ],
+      "bytes": 126962,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "tsubasa-menu",
+      "file": "tsubasa-menu.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          132,
+          840
+        ],
+        [
+          492,
+          868
+        ],
+        [
+          451,
+          1472
+        ],
+        [
+          156,
+          1539
+        ]
+      ],
+      "size": [
+        700,
+        1400
+      ],
+      "bytes": 229478,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "tsubasa-menu-top",
+      "file": "tsubasa-menu-top.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          120,
+          710
+        ],
+        [
+          439,
+          747
+        ],
+        [
+          434,
+          861
+        ],
+        [
+          130,
+          837
+        ]
+      ],
+      "size": [
+        800,
+        320
+      ],
+      "bytes": 40924,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "tsubasa-mat",
+      "file": "tsubasa-mat.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          443,
+          1283
+        ],
+        [
+          823,
+          1281
+        ],
+        [
+          868,
+          1440
+        ],
+        [
+          327,
+          1470
+        ]
+      ],
+      "size": [
+        1024,
+        620
+      ],
+      "bytes": 60040,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "karai-mat",
+      "file": "karai-mat.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          734,
+          1531
+        ],
+        [
+          1070,
+          1514
+        ],
+        [
+          1149,
+          1900
+        ],
+        [
+          802,
+          2014
+        ]
+      ],
+      "size": [
+        600,
+        1024
+      ],
+      "bytes": 117366,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "floor-cover",
+      "file": "floor-cover.webp",
+      "sourceId": "9D11A956-5813-47AB-9D78-7BA5554BBBDC",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          640,
+          1811
+        ],
+        [
+          848,
+          1824
+        ],
+        [
+          854,
+          2025
+        ],
+        [
+          632,
+          2038
+        ]
+      ],
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 45814,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    },
+    {
+      "name": "ceiling",
+      "file": "ceiling.webp",
+      "sourceId": "7550F3C9-DD7F-4687-A10E-E885699A0A24",
+      "sourceSize": [
+        2268,
+        4032
+      ],
+      "measurementSize": [
+        1152,
+        2048
+      ],
+      "sourceQuad": [
+        [
+          116,
+          5
+        ],
+        [
+          603,
+          130
+        ],
+        [
+          570,
+          254
+        ],
+        [
+          52,
+          162
+        ]
+      ],
+      "size": [
+        1024,
+        512
+      ],
+      "bytes": 84530,
+      "technique": "Measured projective surface bake; original pixels, no generated lettering or invented menu"
+    }
+  ]
+}

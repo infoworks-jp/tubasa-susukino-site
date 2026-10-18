@@ -17,9 +17,27 @@ try {for(const width of [1440,390]) {
   const dimensions=()=>page.evaluate(()=>({buffer:[document.querySelector('#city').width,document.querySelector('#city').height],rect:document.querySelector('#city').getBoundingClientRect().toJSON(),camera:JSON.parse(document.documentElement.dataset.cameraState)}));
   const beforeDimensions=await dimensions();
   const source=JSON.parse(await page.locator('html').getAttribute('data-alley-source'));assert.match(source.limitations,/approximate/);
+  if(width===1440) {
+    assert.equal(await page.locator('html').getAttribute('data-alley-textures'),null,'indoor photos do not delay initial street loading');
+    await page.route('**/alley-photo/tsubasa-noren.webp',r=>r.abort());
+    await page.locator('[data-view="alley"]').click();
+    await page.waitForFunction(()=>document.documentElement.dataset.alleyTextures==='error');
+    assert.equal(await page.locator('html').getAttribute('data-alley-view'),'outside','failed surface load preserves complete outdoor scene');
+    await page.unroute('**/alley-photo/tsubasa-noren.webp');
+    let release;
+    const held=new Promise(resolve=>{release=resolve;});
+    await page.route('**/alley-photo/tsubasa-noren.webp',async r=>{await held;await r.continue();});
+    await page.locator('[data-view="alley"]').click();
+    await route.click();
+    release();
+    await page.waitForFunction(()=>document.documentElement.dataset.alleyTextures==='ready');
+    assert.equal(await page.locator('html').getAttribute('data-alley-view'),'outside','late texture completion does not override newer street navigation');
+    await page.unroute('**/alley-photo/tsubasa-noren.webp');
+  }
   const stops=['alley','alley-stairs','alley-turn','alley-passage','alley-door'];
   for(const [index,view] of stops.entries()) {
     await page.locator(`[data-view="${view}"]`).click();
+    await page.waitForFunction(view=>document.documentElement.dataset.alleyView===view && document.documentElement.dataset.alleyTextures==='ready',view);
     const state=JSON.parse(await page.locator('html').getAttribute('data-alley-state'));
     assert.equal(state.view,view);assert.equal(state.streetVisible,false);assert.equal(state.interiorVisible,true);assert.ok(state.geometry>100);
     assert.equal(state.westWallVisible,index!==0);assert.ok(state.localCamera[1]>=-1.18,'indoor camera stays above floor');
