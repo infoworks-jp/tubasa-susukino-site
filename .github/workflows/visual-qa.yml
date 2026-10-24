@@ -19,8 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Generate approved public stories and SEO pages
+        run: npm run build:seo
       - name: Verify SEO metadata, structured data and static menu consistency
         run: npm run test:seo
+      - name: Verify approved short story rendering
+        run: npm run test:stories
       - name: Verify AI FAQ data and provider separation
         run: npm run test:ai
       - name: Reject independent deployment paths
@@ -88,6 +92,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Generate approved public stories and SEO pages
+        run: npm run build:seo
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -180,6 +186,8 @@ jobs:
           ]
     steps:
       - uses: actions/checkout@v4
+      - name: Generate approved public stories and SEO pages
+        run: npm run build:seo
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -224,6 +232,18 @@ jobs:
           path: output/steam-qa
           retention-days: 30
 
+      - name: Verify approved stories on desktop and mobile
+        if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
+        env:
+          STEAM_QA_URL: http://127.0.0.1:4174/
+          STORY_QA_ENGINE: ${{ startsWith(matrix.browser-case, 'webkit') && 'webkit' || 'chromium' }}
+        run: node tests/stories-browser-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always() && (matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390')
+        with:
+          name: stories-${{ github.sha }}-${{ matrix.browser-case }}
+          path: output/stories-qa
+          retention-days: 30
       - name: Verify crawlable guide pages on desktop and mobile
         if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
         env:
@@ -249,6 +269,8 @@ jobs:
         touch-case: [chrome-430, chrome-landscape, webkit-430, webkit-320-reduced]
     steps:
       - uses: actions/checkout@v4
+      - name: Generate approved public stories and SEO pages
+        run: npm run build:seo
       - uses: actions/setup-node@v4
         with:
           node-version: 22

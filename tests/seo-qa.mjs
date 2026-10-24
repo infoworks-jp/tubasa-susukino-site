@@ -83,8 +83,10 @@ for (const image of [...restaurant.image, restaurant.logo]) {
 const robots = await read('robots.txt');
 assert.equal(robots, 'User-agent: *\nAllow: /\n\nSitemap: ' + config.url + 'sitemap.xml\n');
 const sitemap = await read('sitemap.xml');
+const storyData = JSON.parse(await read('content/stories.json'));
+const storyUrls = storyData.episodes.length ? [config.url+'stories/', ...[...storyData.episodes].sort((a,b)=>Date.parse(b.publishedAt)-Date.parse(a.publishedAt)).map(item=>config.url+'stories/'+item.slug+'/')] : [];
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-assert.deepEqual(urls, [config.url, ...Object.values(locales).map(l=>config.url+l.path), ...editorial.map(p=>config.url+p.path)]);
+assert.deepEqual(urls, [config.url, ...Object.values(locales).map(l=>config.url+l.path), ...editorial.map(p=>config.url+p.path), ...storyUrls]);
 assert(sitemap.includes('<lastmod>' + config.lastModified + '</lastmod>'));
 assert(/^\d{4}-\d{2}-\d{2}$/.test(config.lastModified));
 for (const directory of ['reference', 'steam-lab', 'steam-lab-live', 'progress']) {

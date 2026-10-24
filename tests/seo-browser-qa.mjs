@@ -10,6 +10,7 @@ const base = process.env.STEAM_QA_URL || 'http://127.0.0.1:4175/';
 const output = process.env.SEO_QA_OUTPUT || 'output/playwright/seo-guides';
 await fs.mkdir(output,{recursive:true});
 const profiles={desktop:{type:chromium,viewport:{width:1440,height:900}},phone:{type:webkit,viewport:{width:430,height:932},isMobile:true,hasTouch:true},small:{type:chromium,viewport:{width:320,height:780},isMobile:true,hasTouch:true},nojs:{type:chromium,viewport:{width:390,height:844},javaScriptEnabled:false}};
+const storyData=JSON.parse(await fs.readFile('content/stories.json','utf8'));
 const report=[];
 for(const name of (process.env.SEO_QA_CASES||'desktop,phone,small,nojs').split(',')){
   const {type,...opts}=profiles[name];
@@ -60,7 +61,7 @@ for(const name of (process.env.SEO_QA_CASES||'desktop,phone,small,nojs').split('
       await fs.writeFile(path.join(output,`home-${name}-rects.json`),JSON.stringify(rects,null,2));
       await page.screenshot({path:path.join(output,`home-${name}.png`)});
       await page.locator('.home-guides').screenshot({path:path.join(output,`directory-${name}.png`)});
-      assert.equal(await page.locator('.home-guides a').count(),6);
+      assert.equal(await page.locator('.home-guides a').count(),6+(storyData.episodes.length?1:0));
     }
     if(opts.javaScriptEnabled!==false){
       // Same expiration script as the main site, tested across all six guides.

@@ -5,6 +5,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { buildPages, homeDirectory } from './seo-pages.mjs';
+import { buildStories } from './stories.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const check = process.argv.includes('--check');
@@ -105,7 +106,9 @@ for (const [lang, htmlLang] of Object.entries(languages)) {
   html = html.replace(pattern, '$1 lang="' + htmlLang + '" id="menu-panel-' + lang + '" role="tabpanel" aria-labelledby="menu-tab-' + lang + '" tabindex="0"' + (lang === 'ja' ? '' : ' hidden') + '><div class="menu-text-list" data-complete="40-item-master">\n' +
     rows + '\n</div>');
 }
-const directory = homeDirectory();
+const storiesData = JSON.parse(await read('content/stories.json'));
+const stories = buildStories(storiesData);
+const directory = homeDirectory(stories.size > 0);
 if (html.includes('<!-- GUIDES:START')) {
   html = html.replace(/<!-- GUIDES:START[\s\S]*?<!-- GUIDES:END -->/, directory);
 } else {
@@ -119,11 +122,17 @@ const pagePaths = [...pages.keys()].map(p => p.replace(/index\.html$/, ''));
 const outputs = new Map([
   ['index.html', html],
   ...pages,
+  ...stories,
   ['robots.txt', 'User-agent: *\nAllow: /\n\nSitemap: ' + config.url + 'sitemap.xml\n'],
   ['sitemap.xml', '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n' +
     ['', ...pagePaths].map(p => '  <url><loc>' + escape(absolute(p)) + '</loc><lastmod>' + config.lastModified + '</lastmod>' +
       '<image:image><image:loc>' + absolute('assets/' + (p === 'access/' ? 'store-interior.webp' : 'ultimate-miso.webp')) + '</image:loc></image:image></url>').join('\n') + '\n' +
+    [...stories.keys()].map(filename => {
+      const route = filename.replace(/index\.html$/, '');
+      const modified = route === 'stories/' ? [...storiesData.episodes].sort((a,b) => b.publishedAt.localeCompare(a.publishedAt))[0].publishedAt : storiesData.episodes.find(item => route === 'stories/' + item.slug + '/').publishedAt;
+      return '  <url><loc>' + escape(absolute(route)) + '</loc><lastmod>' + modified.slice(0,10) + '</lastmod></url>';
+    }).join('\n') + (stories.size ? '\n' : '') +
     '</urlset>\n'],
 ]);
 // Public engineering demos must not compete with the actual restaurant page.
