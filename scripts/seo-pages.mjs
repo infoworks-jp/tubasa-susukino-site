@@ -40,7 +40,7 @@ ${translated?alternate:''}
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${e(title)}"><meta name="twitter:description" content="${e(desc)}"><meta name="twitter:image" content="${abs('assets/'+file)}">
 <meta name="theme-color" content="#16090b"><link rel="icon" href="/favicon.ico?v=20260915-tsubasa">
 <link rel="stylesheet" href="/guide.css?v=20260920-1"><link rel="stylesheet" href="/visit-guide.css?v=20261007-ai1"><script defer src="/holiday-notice.js?v=20260909-1"></script>
-<script type="application/ld+json">${json({'@context':'https://schema.org','@graph':graph})}</script></head>
+<script type="application/ld+json">${json({'@context':'https://schema.org','@graph':graph})}</script><script defer src="/site-analytics.js?v=20261025-1" data-ga-id="G-TGTCZFTN96" data-ga-hosts="www.tubasa-susukino.com,tubasa-susukino.com"></script></head>
 <body class="tsubasa-guide"><a class="guide-skip" href="#content">${e(l.skip)}</a>
 <header class="guide-header"><a class="guide-brand" href="/"><span lang="ja">味一番つばさ</span><small>AJIICHIBAN TSUBASA</small></a><nav aria-label="${e(l.menu)}"><a href="/${l.path}#full-menu">${e(l.menu)}</a><a href="${l.lang==='ja'?'/access/':'#visit'}">${e(l.access)}</a></nav></header>
 <main id="content"><section class="guide-hero">${photo(file,file==='store-interior.webp'?'味一番つばさのカウンター':l.dishTitles[0],true)}<div class="guide-hero-copy"><p class="eyebrow">${e(p.sub)}</p><h1>${e(p.h1).replace('\n','<br>')}</h1><p>${e(p.intro)}</p><a class="guide-button" href="${translated?'#full-menu':p.path==='access/'?'#visit':'#signatures'}">${translated?e(l.viewMenu):p.path==='access/'?'営業時間・地図を見る':'三つの定番を見る'} ↓</a></div></section>
