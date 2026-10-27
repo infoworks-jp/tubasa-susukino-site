@@ -13,3 +13,18 @@ assert.match(assets,/contents:\s*read/);
 assert.doesNotMatch(assets,/pages:\s*write|id-token:\s*write|git push|upload-pages-artifact/);
 assert.match(assets,/git diff --exit-code -- vendor\/fluid-text\.bundle\.js/);
 console.log('DEPLOY CONTRACT PASS: one publisher, visual QA and reproducible asset gates.');
+
+const location=fs.readFileSync(directory+'/location-qa.yml','utf8');
+assert.match(location,/node tests\/location-browser-qa\.mjs\s+node tests\/alley-browser-qa\.mjs/);
+const own=fs.readFileSync('tests/location-browser-qa.mjs','utf8');
+assert.doesNotMatch(own,/tools\.oyasumi-gamedev\.com|referenceError/);
+assert.match(own,/await verifyProgressiveLoading\(browser, base, "location-qa"\)/);
+const diagnostic=pages.slice(pages.indexOf('  location-reference:'),pages.indexOf('  deploy:'));
+assert.match(diagnostic,/continue-on-error: true/);
+assert.match(diagnostic,/node tests\/location-reference-qa\.mjs/);
+assert.match(diagnostic,/if: failure\(\)/);
+assert.match(diagnostic,/::warning::/);
+assert.match(diagnostic,/if: always\(\)/);
+assert.match(diagnostic,/path: location-reference-qa\//);
+assert.match(fs.readFileSync('tests/location-reference-qa.mjs','utf8'),/throw e;/);
+console.log('REFERENCE ISOLATION PASS: external diagnostics retained; site and alley remain mandatory.');

@@ -28,7 +28,7 @@ jobs:
         run: node tests/facade-projection-qa.mjs
       - run: npm install --no-save --package-lock=false playwright@1.55.0 pngjs@7.0.0
       - run: npx playwright install --with-deps chromium
-      - name: Serve exact source and verify upstream and original implementation
+      - name: Serve exact source and verify Tsubasa location and alley
         run: |
           python3 -m http.server 8080 --bind 127.0.0.1 > /tmp/location-server.log 2>&1 &
           node tests/location-browser-qa.mjs

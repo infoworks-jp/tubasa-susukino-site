@@ -21,6 +21,34 @@ jobs:
     uses: ./.github/workflows/visual-qa.yml
   location-qa:
     uses: ./.github/workflows/location-qa.yml
+  location-reference:
+    # Diagnostic only: external availability must not block the site gates.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --package-lock=false playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - name: Verify external Rokehan reference
+        id: reference
+        run: node tests/location-reference-qa.mjs
+      - name: Report external reference failure
+        if: failure()
+        run: |
+          echo "::warning::External Rokehan reference QA failed. See this job and its artifact; Tsubasa publication gates remain required."
+          echo "External Rokehan reference QA failed; inspect the job logs and location-reference artifact. This diagnostic does not block publication." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: location-reference-${{ github.sha }}
+          path: location-reference-qa/
+          retention-days: 7
   deploy:
     needs: [steam-qa, runtime-assets, location-qa]
     environment:

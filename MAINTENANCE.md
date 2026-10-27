@@ -70,3 +70,9 @@ GitHub ActionsのPages公開成功後、独自ドメインをPCとスマート�
 - ビルド入口は `npm run build:seo`。`scripts/stories.mjs` が `/stories/` と各話ページを生成し、トップの一覧リンク・sitemapも同じビルドで更新します。`npm test` で生成一致・原稿条件等を検査します。
 - 既存Pagesワークフローの検査用checkoutと公開用checkoutで同じビルドを実行するため、原稿JSONだけのcommitでも生成・検証・公開へ進みます。GitHub Actionsの成功と公開URLの本文一致を確認して初めて掲載完了とします。生成HTMLを直接直しても次のビルドで上書きされます。
 - Facebookは別のMetricool運用です。このリポジトリからFacebookへ送信しません。同じ `paragraphs` を本文の正本にし、投稿結果のURL/IDを別途記録して重複投稿を避けます。
+
+## 地図検査と外部参照検査
+
+- `tests/location-browser-qa.mjs` と `tests/alley-browser-qa.mjs` は自サイトの必須検査です。`location-qa` は引き続き公開の必須 gate であり、全 assertion・地図・alley 検査を維持します。
+- 外部 Rokehan の表示・操作検査は `node tests/location-reference-qa.mjs` に分離しています。Deploy Pages の独立した `location-reference` job は公開の依存先に含めず、外部障害で記事公開を止めません。
+- 外部検査が失敗した場合は当該 job の失敗・警告・summary と `location-reference-<commit SHA>` artifact を確認します。`reference.json` と取得可能なスクリーンショットを7日間保持します。外部参照の不調を自サイト検査の成功として扱わず、独立した診断結果として追跡します。
