@@ -23,7 +23,7 @@ jobs:
     uses: ./.github/workflows/location-qa.yml
   location-reference:
     # Diagnostic only: external availability must not block the site gates.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     continue-on-error: true
     permissions:

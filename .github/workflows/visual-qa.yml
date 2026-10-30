@@ -88,7 +88,7 @@ jobs:
   reference-baseline:
     name: 2. Pavel REFERENCE BASELINE
     needs: contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -171,7 +171,7 @@ jobs:
   browser:
     name: 3. This commit / ${{ matrix.browser-case }}
     needs: contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -261,7 +261,7 @@ jobs:
   phone-input:
     name: 3b. Native phone input / ${{ matrix.touch-case }}
     needs: contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
