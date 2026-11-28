@@ -6,14 +6,14 @@
   const motion = matchMedia('(prefers-reduced-motion:reduce)');
   const state = { phase:'pending', progress:0, dots:0, total:0, frames:0, raf:0, duration:2850 };
   window.__tsubasaCrossing = state;
-  let canvas, timer, started = 0, lastFrame = 0, points = [], cursor = 0;
+  let canvas, timer, started = 0, lastFrame = 0, points = [], coordinates = null, cursor = 0;
   const smooth = x => { x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); };
   function finish(reason) {
     if (state.phase === 'complete') return;
     cancelAnimationFrame(state.raf); clearTimeout(timer);
     state.raf=0; state.progress=1; state.phase='complete'; state.reason=reason;
     root.classList.remove('crossing-pending','crossing-ink','crossing-photo');
-    canvas?.remove(); canvas=null; points=[];
+    canvas?.remove(); canvas=null; points=[]; coordinates=null;
     removeEventListener('scroll',onScroll); removeEventListener('resize',onResize);
     removeEventListener('keydown',onKey); removeEventListener('pagehide',onPageHide);
     document.removeEventListener('visibilitychange',onHidden); motion.removeEventListener('change',onMotion);
@@ -49,16 +49,22 @@
       // Spatially jittered dots: never a square pixel grid or a confetti burst.
       const step=Math.max(2.2,Math.sqrt(canvas.width*canvas.height/60000));
       const buckets=Array.from({length:96},()=>[]);
+      // Packed doubles retain the exact previous coordinates without one object per dot.
+      coordinates=new Float64Array(Math.ceil(canvas.width/step)*Math.ceil(canvas.height/step)*3);
+      let count=0;
       let seed=0x51ba5a;
       const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
       for(let y=step/2;y<canvas.height;y+=step)for(let x=step/2;x<canvas.width;x+=step){
         const distance=Math.hypot((x/canvas.width-.53)*.65,(y/canvas.height-.58)*.85);
-        const dot={x:x+(rand()-.5)*step*.72,y:y+(rand()-.5)*step*.72,r:step*(.25+rand()*.18)};
-        buckets[Math.min(95,Math.floor((rand()*.75+distance*.25)*96))].push(dot);
+        const offset=count*3;
+        coordinates[offset]=x+(rand()-.5)*step*.72;
+        coordinates[offset+1]=y+(rand()-.5)*step*.72;
+        coordinates[offset+2]=step*(.25+rand()*.18);
+        buckets[Math.min(95,Math.floor((rand()*.75+distance*.25)*96))].push(count++);
       }
       // Linear-time buckets retain the organic arrival pattern without sorting
       // sixty thousand objects on a phone's main thread.
-      points=buckets.flat(); state.total=points.length; state.setupMs=performance.now()-setupStart;
+      points=new Uint32Array(buckets.flat()); state.total=points.length; state.setupMs=performance.now()-setupStart;
       hero.append(canvas); root.classList.add('crossing-ink'); root.classList.remove('crossing-pending');
       state.phase='ink'; started=performance.now();
       function frame(now) {
@@ -70,7 +76,8 @@
           const end=Math.min(points.length,Math.floor(amount*points.length));
           ctx.beginPath();
           for(;cursor<end;cursor++){
-            const dot=points[cursor]; ctx.moveTo(dot.x+dot.r,dot.y); ctx.arc(dot.x,dot.y,dot.r,0,Math.PI*2);
+            const offset=points[cursor]*3,x=coordinates[offset],y=coordinates[offset+1],r=coordinates[offset+2];
+            ctx.moveTo(x+r,y); ctx.arc(x,y,r,0,Math.PI*2);
           }
           ctx.fill(); state.dots=cursor;
           canvas.style.opacity=String(1-smooth((p-.56)/.44));

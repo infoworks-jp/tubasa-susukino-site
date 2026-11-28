@@ -17,7 +17,7 @@ for(const config of [{name:'chrome-430',engine:chromium,w:430,h:932},{name:'webk
   if(config.engine===chromium)row.control=await verifyScrollControl(c);
   if(process.env.TOUCH_QA_BASELINE==='1')await p.route('**/effects.js*',r=>r.fulfill({path:'tests/fixtures/steam-approved-dynamic-20260909.js',contentType:'text/javascript'}));
   await p.goto(base,{waitUntil:'load'});f=p;
-  await f.waitForFunction(()=>__tsubasaEffects?.surfaces.length===11&&__tsubasaEffects.phoneRefinement);
+  await f.waitForFunction(()=>window.__tsubasaEffects?.surfaces.length===11&&__tsubasaEffects.phoneRefinement);
   assert(await f.evaluate(()=>__tsubasaEffects.gpu && __tsubasaEffects.pressureStyle==='dynamic'));
   const cd=config.engine===chromium?await c.newCDPSession(p):null;
   await f.evaluate(()=>{window.__touchEvents=[];for(const type of ['pointerdown','pointermove','pointerup','pointercancel','touchstart','touchmove','touchend'])document.addEventListener(type,e=>__touchEvents.push({type:e.type,x:e.clientX,y:e.clientY,t:e.timeStamp,now:performance.now(),prevented:e.defaultPrevented,cancelable:e.cancelable,phase:__tsubasaEffects.surfaces[0].phoneGesture?.phase}),{passive:true});});

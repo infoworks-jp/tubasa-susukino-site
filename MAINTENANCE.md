@@ -85,3 +85,11 @@ GitHub ActionsのPages公開成功後、独自ドメインをPCとスマート�
 - GA4は同意した人の計測であり、全訪問者数やGoogleマップ上の閲覧数とは一致しません。
 - 店舗情報の修正提案・インデックス登録リクエストは受付と反映を区別して確認します。
 - 記事を追加したら `npm run build:seo` と `npm test` を実行し、生成された一覧とサイトマップも保存します。
+
+## 演出の軽量化（2026-11-28）
+
+- 煙本体 `effects.js` のシェーダー、密度、解像度、指操作は変更しない。初期化のみ交差点の演出完了後へ移動。スクロールや深いリンクで演出を飛ばした場合は即時開始し、入口スクリプト不達時は期限で復帰。
+- `npm run build:fluid` は `scripts/build-fluid.mjs` から同じ依存バージョンをES Modulesへ分割する。`vendor/fluid-text.bundle.js` と、そのビルドの `output/fluid-build.json` に記載された `vendor/fluid-chunks/` の全ファイルを保存する。`npm run build:fluid -- --check` は必要な全ファイルの欠落や内容の相違を検出する。
+- 店内写真の流動描画はPCも表示位置の240px手前で初期化する。画面外・タブ非表示では描画ループを停止する。同じ位置へ戻ったら同じレンダラー・シェーダーで再開する。
+- Three 0.183.2のWebGPUは `setAnimationLoop(null)` だけでは内部の空ループが残るため、バージョンを固定し、停止・再開をアダプター内で扱う。Three更新時は `effects-runtime-qa.mjs` のPC確認が必要。
+- 最初の点描は約6万個のオブジェクトを座標配列へ変更。同じ乱数・座標・半径・順番・時間を保持する。`crossing-geometry.test.mjs` の変更前の描画ハッシュで検証する。

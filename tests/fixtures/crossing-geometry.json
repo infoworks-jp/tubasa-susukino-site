@@ -1,0 +1,56 @@
+[
+  {
+    "width": 1440,
+    "height": 900,
+    "samples": [
+      {
+        "time": 1000,
+        "total": 60140,
+        "dots": 25686,
+        "phase": "ink",
+        "hash": "d3a3a7f4b39821f55c1f64c744c57a855ebf60ac4bb2c07ddc66f2ce67563b01"
+      },
+      {
+        "time": 2100,
+        "total": 60140,
+        "dots": 60140,
+        "phase": "photo",
+        "hash": "3f425a5d29c471ccba102787fd85c7a98fa134cc42194c979ce3ea5ffe5826c9"
+      },
+      {
+        "time": 2850,
+        "total": 60140,
+        "dots": 60140,
+        "phase": "complete",
+        "hash": "3f425a5d29c471ccba102787fd85c7a98fa134cc42194c979ce3ea5ffe5826c9"
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "height": 932,
+    "samples": [
+      {
+        "time": 1000,
+        "total": 59926,
+        "dots": 25595,
+        "phase": "ink",
+        "hash": "3717ae477f6674652beb52897c551f409f5784f3a4ddaa511f3ea26eed277760"
+      },
+      {
+        "time": 2100,
+        "total": 59926,
+        "dots": 59926,
+        "phase": "photo",
+        "hash": "5b2d5fbd5abfe8ea35a92e18f9c475677f1eb454c55879be8c1fd6a8159982ad"
+      },
+      {
+        "time": 2850,
+        "total": 59926,
+        "dots": 59926,
+        "phase": "complete",
+        "hash": "5b2d5fbd5abfe8ea35a92e18f9c475677f1eb454c55879be8c1fd6a8159982ad"
+      }
+    ]
+  }
+]

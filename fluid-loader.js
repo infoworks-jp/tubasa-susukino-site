@@ -10,7 +10,7 @@
       if(started)return;
       started=true; clearTimeout(deadline);
       document.removeEventListener('tsubasa:crossing-ready',start);
-      import('./vendor/fluid-text.bundle.js?v=crossing-20260920');
+      import('./vendor/fluid-text.bundle.js?v=performance-20261128-1');
     };
     if(document.documentElement.classList.contains('crossing-pending') ||
        (window.__tsubasaCrossing && window.__tsubasaCrossing.phase !== 'complete')) {

@@ -27,6 +27,8 @@ jobs:
         run: npm run test:stories
       - name: Verify AI FAQ data and provider separation
         run: npm run test:ai
+      - name: Verify original reveal geometry and deferred smoke startup
+        run: node --test tests/steam-loader.test.mjs tests/crossing-geometry.test.mjs
       - name: Reject independent deployment paths
         run: node tests/deploy-contract-qa.mjs
       - name: Enforce source and manager contract

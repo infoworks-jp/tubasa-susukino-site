@@ -21,8 +21,8 @@ jobs:
       - name: Verify the committed bundle matches its source
         run: |
           npm ci --ignore-scripts
-          npm run build:fluid
-          git diff --exit-code -- vendor/fluid-text.bundle.js
+          npm run build:fluid -- --check
+          git diff --exit-code -- vendor/fluid-text.bundle.js vendor/fluid-chunks
       - name: Verify committed local media
         run: |
           set -euo pipefail

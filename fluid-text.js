@@ -26,6 +26,36 @@ const commonScene=async(stage)=>{
   const fit=()=>{const image=texture.image,imageAspect=(image?.naturalWidth||image?.width||1)/(image?.naturalHeight||image?.height||1),viewHeight=2*Z*Math.tan((FOV*Math.PI)/360),viewWidth=viewHeight*camera.aspect,viewAspect=viewWidth/viewHeight;let width=viewWidth,height=viewHeight;if(imageAspect>viewAspect)width=viewHeight*imageAspect;else height=viewWidth/imageAspect;mesh.scale.set(width,height,1);const focus=stage===topStage?.72:.5;mesh.position.y=Math.max(0,height-viewHeight)*(focus-.5)};
   return{scene,camera,texture,material,mesh,fit};
 };
+// Stop the browser callback itself offscreen, not just the GPU work inside it.
+// Simulation resolution, shaders, splats and visible frame rate stay unchanged.
+function visibleLoop(stage,renderer,timer,draw){
+  let visible=false,running=false,disposed=false;
+  // Pinned Three r183 WebGPU keeps an internal RAF even with a null callback.
+  // Pause that scheduler too; keep the public API fallback for other versions.
+  const animation=renderer.isWebGPURenderer?renderer._animation:null;
+  animation?.stop?.();
+  const update=()=>{
+    const next=visible&&!document.hidden&&!disposed;
+    if(next===running)return;
+    running=next;
+    if(next)timer.reset();
+    renderer.setAnimationLoop(next?draw:null);
+    if(animation){if(next)animation.start();else animation.stop();}
+  };
+  const observer=new IntersectionObserver(entries=>{visible=entries[0]?.isIntersecting??false;update()},{rootMargin:'100px'});
+  observer.observe(stage);
+  document.addEventListener('visibilitychange',update);
+  return()=>{disposed=true;update();observer.disconnect();document.removeEventListener('visibilitychange',update);timer.dispose()};
+}
+function lazyShop(init){
+  if(!(shopStage instanceof HTMLElement))return;
+  const observer=new IntersectionObserver(entries=>{
+    if(!entries[0]?.isIntersecting)return;
+    observer.disconnect();init(shopStage,{subtle:false});
+  },{rootMargin:'240px'});
+  observer.observe(shopStage);
+  addEventListener('pagehide',()=>observer.disconnect(),{once:true});
+}
 const mountCanvas=(stage,renderer)=>{const canvas=renderer.domElement;canvas.className='fluid-text-canvas';if(stage===topStage)canvas.id='fluidTextCanvas';Object.assign(canvas.style,{position:'absolute',inset:'0',width:'100%',height:'100%',touchAction:'pan-y'});stage.appendChild(canvas);return canvas};
 
 async function initWebGL(stage,{subtle=false}={}){
@@ -66,12 +96,11 @@ async function initWebGL(stage,{subtle=false}={}){
     stage.addEventListener('touchstart',bridgeTouch,{passive:true});
     stage.addEventListener('touchmove',bridgeTouch,{passive:true});
     stage.addEventListener('touchend',()=>{lastTouch=null},{passive:true});
-    const resize=()=>{const width=Math.max(1,stage.clientWidth),height=Math.max(1,stage.clientHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.12));renderer.setSize(width,height,false);composer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();fluid.resize(width,height);fit()};
+    let lastSize='';const resize=()=>{const width=Math.max(1,stage.clientWidth),height=Math.max(1,stage.clientHeight),ratio=Math.min(devicePixelRatio||1,1.12),size=width+':'+height+':'+ratio;if(size===lastSize)return;lastSize=size;renderer.setPixelRatio(ratio);renderer.setSize(width,height,false);composer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();fluid.resize(width,height);fit()};
     resize();addEventListener('resize',resize,{passive:true});visualViewport?.addEventListener('resize',resize,{passive:true});
-    const timer=new Timer(),STEP=1/60,MAX=2;let accumulator=0,frame=0,active=true,lastAmbient=-1;
-    const observer=new IntersectionObserver(entries=>{active=entries[0]?.isIntersecting??true},{rootMargin:'100px'});observer.observe(stage);
-    renderer.setAnimationLoop(()=>{if(!active)return;timer.update();const seconds=timer.getElapsed();if(seconds-lastAmbient>.82){lastAmbient=seconds;const phase=seconds*(shop?.43:.31)+(shop?1.7:0),x=.5+Math.sin(phase)*.31,y=(shop?.46:.34)+Math.sin(phase*.63)*.12;fluid.addSplat(x,y,Math.cos(phase)*18,8+Math.sin(phase*.71)*5,{radius:shop?.0024:.0018,dyeColor:[.025,.035,.05]})}accumulator+=Math.min(Math.max(timer.getDelta(),1e-6),STEP*MAX);let steps=0;while(accumulator>=STEP&&steps<MAX){fluid.step(STEP);accumulator-=STEP;steps++}if(steps===MAX)accumulator=0;composer.render(STEP);frame++;if(frame===2)stage.classList.add('fluid-ready');setState(stage,{engine:'three-fluid-fx-fluid-text',pipeline:'GLSL',renderer:'WebGL2',profile:'performance',pointer:true,touch:true,pointerPresses,ambient:true,mobile,subtle,frame})});
-    addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);detach?.();canvas.removeEventListener('pointerdown',pressSplat);observer.disconnect();composer.dispose();material.dispose();mesh.geometry.dispose();texture.dispose();fluid.dispose?.();renderer.dispose()},{once:true});
+    const timer=new Timer(),STEP=1/60,MAX=2;let accumulator=0,frame=0,lastAmbient=-1;
+    const stopLoop=visibleLoop(stage,renderer,timer,()=>{timer.update();const seconds=timer.getElapsed();if(seconds-lastAmbient>.82){lastAmbient=seconds;const phase=seconds*(shop?.43:.31)+(shop?1.7:0),x=.5+Math.sin(phase)*.31,y=(shop?.46:.34)+Math.sin(phase*.63)*.12;fluid.addSplat(x,y,Math.cos(phase)*18,8+Math.sin(phase*.71)*5,{radius:shop?.0024:.0018,dyeColor:[.025,.035,.05]})}accumulator+=Math.min(Math.max(timer.getDelta(),1e-6),STEP*MAX);let steps=0;while(accumulator>=STEP&&steps<MAX){fluid.step(STEP);accumulator-=STEP;steps++}if(steps===MAX)accumulator=0;composer.render(STEP);frame++;if(frame===2)stage.classList.add('fluid-ready');setState(stage,{engine:'three-fluid-fx-fluid-text',pipeline:'GLSL',renderer:'WebGL2',profile:'performance',pointer:true,touch:true,pointerPresses,ambient:true,mobile,subtle,frame})});
+    addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);detach?.();canvas.removeEventListener('pointerdown',pressSplat);stopLoop();composer.dispose();material.dispose();mesh.geometry.dispose();texture.dispose();fluid.dispose?.();renderer.dispose()},{once:true});
   }catch(error){console.error('[Tsubasa Fluid WebGL2]',error);renderer?.domElement?.remove();fallback(stage,String(error?.message||error))}
 }
 
@@ -89,18 +118,18 @@ async function initWebGPU(stage,{subtle=false}={}){
     const distortion=uniform(subtle?.42:.78),intensity=uniform(subtle?.26:1.18),opacity=uniform(subtle?.075:.64),velocity=uniform(subtle?1.08:1.45),elapsed=uniform(0),texel=uniform(new Vector2(1/512,1/512)),cursor=uniform(new Color(.85,.95,1)),vibrance=uniform(subtle?.35:.56);
     let output=simpleDistortion(pass(scene,camera),fluid.densityNode,distortion);output=fluidOverlay('artInk',output,fluid.densityNode,fluid.dyeNode,fluid.velocityNode,{intensity,opacity,time:elapsed,texel,cursorColor:cursor,vibrance,velocityScale:velocity});
     const pipeline=new RenderPipeline(renderer);pipeline.outputNode=output;pipeline.needsUpdate=true;const detach=attachPointerSplats(canvas,fluid,{coloredStrokes:true});let pointerPresses=0;const pressSplat=(event)=>{const rect=canvas.getBoundingClientRect();if(rect.width<1||rect.height<1)return;pointerPresses++;const x=(event.clientX-rect.left)/rect.width,y=1-(event.clientY-rect.top)/rect.height;fluid.addSplat(x,y,0,120,{radius:.00115,dyeColor:[.72,.84,1]})};canvas.addEventListener('pointerdown',pressSplat,{passive:true});
-    const resize=()=>{const width=Math.max(1,stage.clientWidth),height=Math.max(1,stage.clientHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();fluid.resize(width,height);const image=fluid.dyeTexture.image;texel.value.set(1/(image.width||512),1/(image.height||512));fit()};
+    let lastSize='';const resize=()=>{const width=Math.max(1,stage.clientWidth),height=Math.max(1,stage.clientHeight),ratio=Math.min(devicePixelRatio||1,1.6),size=width+':'+height+':'+ratio;if(size===lastSize)return;lastSize=size;renderer.setPixelRatio(ratio);renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();fluid.resize(width,height);const image=fluid.dyeTexture.image;texel.value.set(1/(image.width||512),1/(image.height||512));fit()};
     resize();addEventListener('resize',resize,{passive:true});visualViewport?.addEventListener('resize',resize,{passive:true});
-    const timer=new Timer(),STEP=1/60,MAX=3;let accumulator=0,frame=0,active=true,lastAmbient=-1;const observer=new IntersectionObserver(entries=>{active=entries[0]?.isIntersecting??true},{rootMargin:'120px'});observer.observe(stage);
-    renderer.setAnimationLoop(()=>{if(!active)return;timer.update();const seconds=timer.getElapsed();if(seconds-lastAmbient>.82){lastAmbient=seconds;const shop=stage===shopStage,phase=seconds*(shop?.43:.31)+(shop?1.7:0),x=.5+Math.sin(phase)*.31,y=(shop?.46:.34)+Math.sin(phase*.63)*.12;fluid.addSplat(x,y,Math.cos(phase)*16,7+Math.sin(phase*.71)*4,{radius:shop?.0022:.0017,dyeColor:[.02,.03,.045]})}const dt=Math.min(Math.max(timer.getDelta(),1e-6),STEP*MAX);elapsed.value=seconds;accumulator+=dt;let steps=0;while(accumulator>=STEP&&steps<MAX){fluid.step(STEP);accumulator-=STEP;steps++}if(steps===MAX)accumulator=0;pipeline.render();frame++;if(frame===2)stage.classList.add('fluid-ready');setState(stage,{engine:'three-fluid-fx-fluid-text',pipeline:'TSL',renderer:'WebGPU',profile:'performance',pointer:true,touch:true,pointerPresses,ambient:true,mobile,subtle,frame})});
-    addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);detach?.();canvas.removeEventListener('pointerdown',pressSplat);observer.disconnect();material.dispose();mesh.geometry.dispose();texture.dispose();fluid.dispose?.();renderer.dispose()},{once:true});
+    const timer=new Timer(),STEP=1/60,MAX=3;let accumulator=0,frame=0,lastAmbient=-1;
+    const stopLoop=visibleLoop(stage,renderer,timer,()=>{timer.update();const seconds=timer.getElapsed();if(seconds-lastAmbient>.82){lastAmbient=seconds;const shop=stage===shopStage,phase=seconds*(shop?.43:.31)+(shop?1.7:0),x=.5+Math.sin(phase)*.31,y=(shop?.46:.34)+Math.sin(phase*.63)*.12;fluid.addSplat(x,y,Math.cos(phase)*16,7+Math.sin(phase*.71)*4,{radius:shop?.0022:.0017,dyeColor:[.02,.03,.045]})}const dt=Math.min(Math.max(timer.getDelta(),1e-6),STEP*MAX);elapsed.value=seconds;accumulator+=dt;let steps=0;while(accumulator>=STEP&&steps<MAX){fluid.step(STEP);accumulator-=STEP;steps++}if(steps===MAX)accumulator=0;pipeline.render();frame++;if(frame===2)stage.classList.add('fluid-ready');setState(stage,{engine:'three-fluid-fx-fluid-text',pipeline:'TSL',renderer:'WebGPU',profile:'performance',pointer:true,touch:true,pointerPresses,ambient:true,mobile,subtle,frame})});
+    addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);detach?.();canvas.removeEventListener('pointerdown',pressSplat);stopLoop();material.dispose();mesh.geometry.dispose();texture.dispose();fluid.dispose?.();renderer.dispose()},{once:true});
   }catch(error){console.error('[Tsubasa Fluid WebGPU]',error);renderer?.domElement?.remove();fallback(stage,String(error?.message||error))}
 }
 
 if(mobile){
   await initWebGL(topStage);
-  if(shopStage instanceof HTMLElement){const lazyShop=new IntersectionObserver(entries=>{if(!entries[0]?.isIntersecting)return;lazyShop.disconnect();initWebGL(shopStage,{subtle:false})},{rootMargin:'240px'});lazyShop.observe(shopStage)}
+  lazyShop(initWebGL);
 }else{
   await initWebGPU(topStage);
-  if(shopStage instanceof HTMLElement)await initWebGPU(shopStage,{subtle:false});
+  lazyShop(initWebGPU);
 }
