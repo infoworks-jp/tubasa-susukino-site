@@ -27,7 +27,7 @@ try {
     assert.match(await notice.innerText(), /9月21日（月）[\s\S]*営業します[\s\S]*9月24日（木）[\s\S]*振替休業/);
     const layout = await page.evaluate(() => {
       const n = document.querySelector("#holiday-notice"), r = n.getBoundingClientRect();
-      const overlap = [...document.querySelectorAll("#top .hero-copy h1, #top .hero-logo, #top .crossing-next, #openCmPreview")]
+      const overlap = [...document.querySelectorAll("#top .hero-copy h1, #top .hero-logo, #top .crossing-next")]
         .filter(e => { const b=e.getBoundingClientRect(); return r.left<b.right && r.right>b.left && r.top<b.bottom && r.bottom>b.top; })
         .map(e => e.className || e.tagName);
       return { box:r.toJSON(), overlap, fits:r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight,
@@ -39,8 +39,11 @@ try {
     assert.equal(layout.overflow, false, JSON.stringify(layout));
     assert.deepEqual(layout.overlap, [], JSON.stringify(layout));
     assert(layout.dates.every(x=>x.fits), JSON.stringify(layout));
-    // The announcement must not cover or intercept the existing CM control.
-    await page.locator("#openCmPreview").click();
+    // The video section was removed. The announcement must leave the new
+    // crossing-to-bowl link usable; the menu retains the native dialog check.
+    await page.locator(".crossing-next").click();
+    await page.waitForFunction(() => location.hash === '#signature');
+    await page.locator('.menu-panel.active [data-menu]').click();
     await page.locator("dialog[open]").waitFor({ state:"visible" });
     assert.equal(await page.locator("dialog[open]").count(), 1);
     await page.keyboard.press("Escape");
@@ -48,7 +51,7 @@ try {
     // Wait for the observable close; an immediate count races the browser task.
     await page.locator("dialog[open]").waitFor({ state:"detached" });
     assert.equal(await page.locator("dialog[open]").count(), 0);
-    report.cases.push({ width, height, layout, cmControl:true });
+    report.cases.push({ width, height, layout, bowlNavigation:true, menuDialog:true });
     await context.close();
   }
   for (const timezoneId of ["Asia/Tokyo", "America/Los_Angeles"]) {
