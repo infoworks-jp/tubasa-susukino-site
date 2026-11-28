@@ -11,7 +11,9 @@
   const read = () => { try { return localStorage.getItem(key); } catch { return null; } };
   const save = value => { try { localStorage.setItem(key, value); } catch { /* Choice applies to this visit if storage is unavailable. */ } };
   let loaded = false;
+  let granted = false;
   function enable() {
+    granted = true;
     window[disabled] = false;
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
@@ -27,6 +29,7 @@
     document.head.append(tag);
   }
   function decline() {
+    granted = false;
     window[disabled] = true;
     if (loaded) window.gtag('consent', 'update', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
     // Remove first-party GA cookies at each domain/path used by this site.
@@ -35,6 +38,28 @@
     const parts=location.pathname.split('/');const paths=['/',...parts.map((_,i)=>parts.slice(0,i+1).join('/')||'/')];
     for(const name of names)for(const domain of domains)for(const path of paths)document.cookie=name+'=;Max-Age=0;path='+path+(domain?';domain='+domain:'')+';SameSite=Lax';
   }
+  // Count intent, never completed calls or visits. Do not collect link text,
+  // phone numbers, form entries, or destination/query values.
+  document.addEventListener('click', event => {
+    if (!granted || !loaded || window[disabled]) return;
+    const control = event.target?.closest?.('a,button');
+    if (!control) return;
+    const href = control.getAttribute('href') || '';
+    let action;
+    if (/^tel:(?:\+81[- ]?11[- ]?521[- ]?5963|011[- ]?521[- ]?5963)$/.test(href)) action = 'phone_click';
+    else {
+      let url;
+      try { url = new URL(href, location.href); } catch { return; }
+      if (url.protocol === 'https:' && ['www.google.com', 'maps.google.com', 'maps.app.goo.gl'].includes(url.hostname) && (url.pathname.startsWith('/maps') || url.hostname === 'maps.app.goo.gl')) action = 'directions_click';
+      else if (url.hostname === location.hostname && (url.pathname === '/menu/' || url.hash === '#menu' || ['ja','en','zh','ko'].includes(control.getAttribute('data-lang')))) action = 'menu_click';
+    }
+    if (action) window.gtag('event', action, {
+      send_to: id,
+      page_location: cleanURL(location.href),
+      page_referrer: cleanURL(document.referrer),
+      transport_type: 'beacon'
+    });
+  }, { capture: true });
   const english = document.documentElement.lang.startsWith('en');
   const style = document.createElement('style');style.textContent = '#site-analytics-notice{position:fixed;z-index:2147483000;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));box-sizing:border-box;max-width:680px;padding:16px 18px;background:#f8f5ef;color:#211e1b;border:1px solid #8c8478;border-radius:8px;box-shadow:0 5px 25px #0003;font:14px/1.6 system-ui,sans-serif;text-align:left}#site-analytics-notice p{margin:0 0 10px;color:inherit;font:inherit}#site-analytics-notice button,#site-analytics-settings{font:inherit;cursor:pointer;min-height:44px}#site-analytics-notice button{padding:8px 15px;border:1px solid #574d43;border-radius:4px;background:#fff;color:#211e1b;margin:0 8px 0 0}#site-analytics-notice button[data-accept]{background:#28231f;color:#fff}#site-analytics-settings{display:block;position:relative;z-index:10;width:max-content;max-width:100%;margin:12px auto;padding:8px 12px;background:transparent;border:1px solid currentColor;border-radius:4px;color:inherit;font-size:12px}';document.head.append(style);
   const settings = document.createElement('button');settings.id='site-analytics-settings';settings.type='button';settings.textContent=english?'Analytics preferences':'アクセス解析の設定';

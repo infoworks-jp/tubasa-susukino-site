@@ -76,3 +76,12 @@ GitHub ActionsのPages公開成功後、独自ドメインをPCとスマート�
 - `tests/location-browser-qa.mjs` と `tests/alley-browser-qa.mjs` は自サイトの必須検査です。`location-qa` は引き続き公開の必須 gate であり、全 assertion・地図・alley 検査を維持します。
 - 外部 Rokehan の表示・操作検査は `node tests/location-reference-qa.mjs` に分離しています。Deploy Pages の独立した `location-reference` job は公開の依存先に含めず、外部障害で記事公開を止めません。
 - 外部検査が失敗した場合は当該 job の失敗・警告・summary と `location-reference-<commit SHA>` artifact を確認します。`reference.json` と取得可能なスクリーンショットを7日間保持します。外部参照の不調を自サイト検査の成功として扱わず、独立した診断結果として追跡します。
+
+## 無料の集客計測（2026-11-28）
+
+- `site-analytics.js`: 許可された閲覧でのみ `directions_click`（Google地図リンク）、`phone_click`（店舗電話リンク）、`menu_click`（メニューリンク・言語ボタン）を送ります。来店完了・通話成立・売上ではありません。
+- GA4のキーイベントは `directions_click` と `phone_click`。金額は設定せず、各イベントをセッションごとに1回カウントします。通常イベントの回数はクリック回数です。
+- 許可前・拒否後・外部ホスト・埋め込みでは収集しません。リンク先のクエリ、入力内容、電話番号をイベントパラメータに含めません。
+- GA4は同意した人の計測であり、全訪問者数やGoogleマップ上の閲覧数とは一致しません。
+- 店舗情報の修正提案・インデックス登録リクエストは受付と反映を区別して確認します。
+- 記事を追加したら `npm run build:seo` と `npm test` を実行し、生成された一覧とサイトマップも保存します。

@@ -5,6 +5,7 @@ function visit({choice,host='example.com',framed=false,noStorage=false}={}){
  const all=[],cookies=[];let saved=choice;const listeners={};
  class Element{constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.style={};all.push(this)}append(...items){for(const i of items){this.children.push(i);i.parent=this}}setAttribute(k,v){this[k]=v}remove(){this.removed=true;this.parent.children=this.parent.children.filter(i=>i!==this)}focus(){} }
  const doc={currentScript:{dataset:{gaId:'G-TEST123456',gaHosts:'example.com'}},documentElement:{lang:'ja'},referrer:'https://search.example/?email=secret#private',createElement:t=>new Element(t),getElementById:id=>all.find(e=>e.id===id&&!e.removed)};
+ doc.addEventListener=(n,f)=>listeners['document:'+n]=f;
  doc.head=new Element('head');doc.body=new Element('body');Object.defineProperty(doc,'cookie',{get:()=> '_ga=123; _ga_TEST123456=456; app_session=preserve',set:v=>cookies.push(v)});
  const ctx={document:doc,location:{hostname:host,href:'https://'+host+'/contact/?email=private@example.com#secret',pathname:'/contact/'},localStorage:{getItem(){if(noStorage)throw Error('blocked');return saved},setItem(k,v){if(noStorage)throw Error('blocked');saved=v}},URL,Date,console};ctx.window=ctx;ctx.top=framed?{}:ctx;ctx.addEventListener=(n,f)=>listeners[n]=f;vm.createContext(ctx);vm.runInContext(code,ctx);
  const events=()=>Array.from(ctx.dataLayer||[],args=>Array.from(args));const scripts=()=>doc.head.children.filter(e=>e.tagName==='script');const choose=value=>{const panel=doc.getElementById('site-analytics-notice');assert.ok(panel);panel.children.find(e=>e.tagName==='button'&&(value==='accepted'?e.dataset.accept!==undefined:e.dataset.accept===undefined)).onclick()};
@@ -16,3 +17,26 @@ test('saved permission applies, withdrawal disables and reacceptance updates con
 test('saved rejection survives navigation and can be changed',()=>{const v=visit({choice:'declined'});assert.equal(v.scripts().length,0);assert.equal(v.doc.getElementById('site-analytics-notice'),undefined);v.doc.getElementById('site-analytics-settings').onclick();v.choose('accepted');assert.equal(v.scripts().length,1);});
 test('local previews, foreign hosts and iframes never collect',()=>{for(const options of [{host:'localhost'},{host:'attacker.example'},{framed:true}]){const v=visit(options);assert.equal(v.scripts().length,0);assert.equal(v.doc.getElementById('site-analytics-notice'),undefined);}});
 test('blocked storage does not prevent page use or explicit visit consent',()=>{const v=visit({noStorage:true});assert.equal(v.scripts().length,0);v.choose('accepted');assert.equal(v.scripts().length,1);});
+
+test('visit intent clicks require consent and send only fixed action names',()=>{
+ const v=visit();
+ const click=(href,attrs={})=>v.listeners['document:click']({target:{closest:()=>({getAttribute:k=>k==='href'?href:(attrs[k]??null)})}});
+ assert.equal(typeof v.listeners['document:click'],'function');
+ click('tel:0115215963');assert.equal(v.events().filter(e=>e[0]==='event').length,0);
+ v.choose('accepted');
+ click('tel:0115215963');click('https://www.google.com/maps/dir/?api=1&destination=private');click('/menu/?email=private@example.com');
+ const actions=v.events().filter(e=>e[0]==='event');
+ assert.deepEqual(actions.map(e=>e[1]),['phone_click','directions_click','menu_click']);
+ assert.ok(!JSON.stringify(actions).includes('private'));assert.ok(!JSON.stringify(actions).includes('0115215963'));
+ click('https://attacker.example/menu/');click('tel:09000000000');assert.equal(v.events().filter(e=>e[0]==='event').length,3);
+ v.doc.getElementById('site-analytics-settings').onclick();v.choose('declined');click('tel:0115215963');assert.equal(v.events().filter(e=>e[0]==='event').length,3);
+});
+test('cross-tab withdrawal prevents intent events; blocked storage still permits explicit consent',()=>{
+ for(const noStorage of [false,true]){
+  const v=visit({noStorage});v.choose('accepted');
+  const event={target:{closest:()=>({getAttribute:k=>k==='href'?'#menu':null})}};
+  v.listeners['document:click'](event);assert.equal(v.events().filter(e=>e[0]==='event').length,1);
+  v.listeners.storage({key:'site-analytics-consent-v1',newValue:'declined'});
+  v.listeners['document:click'](event);assert.equal(v.events().filter(e=>e[0]==='event').length,1);
+ }
+});
