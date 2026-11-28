@@ -314,7 +314,9 @@ export async function fingerQA(
       results.push({ nativeTouch: { horizontal, vertical } });
       await cdp.detach();
     }
-    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+    // The homepage now goes straight from the crossing to miso, so the first
+    // bowl can still intersect at scrollY=0. Access is beyond every bowl.
+    await page.locator("#access").evaluate(e => e.scrollIntoView({behavior:"instant"}));
     // Software-rendered CI can take >300ms per frame. Wait for the actual
     // offscreen observer cleanup, not a delay shorter than one browser frame.
     await page.waitForFunction(

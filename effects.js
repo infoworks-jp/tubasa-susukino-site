@@ -885,10 +885,12 @@ void main(){
     for (const s of systems) {
       if (!s.visible || !s.image.naturalWidth) continue;
       active = true;
-      const interval = s.signature ? 1000 / 30 : 1000 / 24;
+      // Eight small menu photos can be visible together. Keep the large bowls
+      // at 30Hz and update the slower, smaller card plumes at 16Hz.
+      const interval = s.signature ? 1000 / 30 : 1000 / 16;
       if (s.last && now - s.last < interval - 1) continue;
       if (motion.matches && s.ready && !s.needsDraw) continue;
-      const dt = s.last ? Math.min(0.05, (now - s.last) / 1000) : 1 / 30;
+      const dt = s.last ? Math.min(s.signature ? 0.05 : 0.08, (now - s.last) / 1000) : 1 / 30;
       s.last = now;
       s.time += dt;
       current = s;

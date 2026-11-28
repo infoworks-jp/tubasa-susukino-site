@@ -24,12 +24,12 @@ for(const name of cases){
   const initial=await page.evaluate(()=>{
    const c=document.querySelector('.crossing-dots'),d=c.getContext('2d').getImageData(0,0,1,1).data;
    return {state:{...__tsubasaCrossing},paper:[...d],order:[...document.querySelector('main').children].filter(e=>e.matches('section')).slice(0,3).map(e=>e.id),
-    src:document.querySelector('#top .hero-bg').currentSrc,videoLoaded:!!document.querySelector('#videoTop video').dataset.loaded};
+    src:document.querySelector('#top .hero-bg').currentSrc,videoPresent:!!document.querySelector('#videoTop video')};
   });
-  assert.deepEqual(initial.order,['top','videoTop','signature']);
+  assert.deepEqual(initial.order,['top','signature','']);
   assert.deepEqual(initial.paper,[250,249,246,255]);
   assert(initial.src.endsWith('/assets/susukino-top.webp'));
-  assert.equal(initial.videoLoaded,false,'Do not fetch the below-fold video during the entrance');
+  assert.equal(initial.videoPresent,false,'The homepage no longer embeds the video');
   await page.screenshot({path:`${output}/${name}-white.png`});
   await page.clock.runFor(1000);
   const ink=await page.evaluate(()=>({...__tsubasaCrossing}));
@@ -50,13 +50,11 @@ for(const name of cases){
   await page.clock.resume();
   await page.waitForTimeout(150);
   assert.equal(await page.locator('.site-header nav a[href="#menu"]').isVisible(),true,
-    'The overlapping video must not hide navigation over the street hero');
+    'Navigation remains visible over the street hero');
   await page.locator('.crossing-next').click();
-  await page.waitForFunction(()=>!document.querySelector('#videoTop video').paused);
-  assert.equal(await page.locator('#videoTop video').evaluate(v=>v.muted),true);
-  await page.locator('#signature').evaluate(e=>e.scrollIntoView({behavior:'instant'}));
-  await page.waitForFunction(()=>document.querySelector('#videoTop video').paused);
-  result.entrance={initial,ink,done,videoStartsWhenVisible:true,videoPausesOffscreen:true};
+  await page.waitForFunction(()=>location.hash==='#signature');
+  assert.equal(await page.locator('video').count(),0);
+  result.entrance={initial,ink,done,signatureLink:true,videoRemoved:true};
   await page.goto(new URL('#signature',base).href,{waitUntil:'load'});
   await page.reload({waitUntil:'load'});
   await page.waitForFunction(()=>window.__tsubasaCrossing?.phase==='complete');

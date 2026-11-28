@@ -3,7 +3,7 @@
   const autoStart = document.currentScript?.hasAttribute("data-boundary-autostart");
   const root = document.documentElement;
   const definitions = [
-    ["street-film", "交差点 → 調理動画", "#top", "#videoTop"],
+    ["street-film", "交差点 → 一杯", "#top", document.querySelector("#videoTop") ? "#videoTop" : "#signature"],
     ["miso-butter", "究極 → バターコーン", "#signature", ".signature-butter-corn"],
     ["butter-tsubasa", "バターコーン → つばさ", ".signature-butter-corn", ".signature-tsubasa"],
   ];

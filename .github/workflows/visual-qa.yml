@@ -205,11 +205,18 @@ jobs:
           STEAM_QA_CASES: ${{ matrix.browser-case }}
           STEAM_QA_SOFTWARE: "1"
         run: node tests/steam-qa.mjs
-      - name: Verify white-to-stipple entrance, shared photograph and lazy video
+      - name: Verify white-to-stipple entrance and direct bowl navigation
         env:
           STEAM_QA_URL: http://127.0.0.1:4174/
           CROSSING_QA_CASES: ${{ matrix.browser-case }}
         run: node tests/crossing-qa.mjs
+      - name: Verify compact homepage and linked experiences
+        if: matrix.browser-case == 'chromium-desktop'
+        env:
+          STEAM_QA_URL: http://127.0.0.1:4174/
+          STEAM_QA_SOFTWARE: "1"
+          HOME_QA_OUTPUT: output/steam-qa/home-simple
+        run: node tests/home-simple-qa.mjs
       - name: Verify announcement layout and automatic JST expiration
         if: matrix.browser-case == 'chromium-desktop' || matrix.browser-case == 'webkit-390'
         env:

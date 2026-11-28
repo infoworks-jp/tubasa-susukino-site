@@ -5,6 +5,7 @@ html.boundary-blend #top {
   background: transparent;
 }
 html.boundary-blend #videoTop,
+html.boundary-blend #top + #signature,
 html.boundary-blend .signature-tsubasa {
   margin-top: calc(-1 * var(--boundary-overlap));
 }

@@ -10,7 +10,7 @@
     loaded=true;clearTimeout(deadline);
     document.removeEventListener('tsubasa:crossing-ready',load);
     const script=document.createElement('script');
-    script.src='effects.js?v=bold-steam-20260920-2';
+    script.src='effects.js?v=card-cadence-20261128';
     document.body.appendChild(script);
   };
   // The bowls are below the entrance. Keep their identical solver from
